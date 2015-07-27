@@ -24,6 +24,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once $CFG->libdir.'/filelib.php';
+
 /**
  * Ilios enrolment plugin implementation.
  * @author    Carson Tam
@@ -273,12 +275,12 @@ class enrol_ilios_plugin extends enrol_plugin {
             return;
         }
 
-        if (!empty($data->customint2)) {
-            $data->customint2 = $step->get_mappingid('group', $data->customint2);
+        if (!empty($data->customint6)) {
+            $data->customint6 = $step->get_mappingid('group', $data->customint6);
         }
 
-        if ($data->roleid and $DB->record_exists('ilios', array('id'=>$data->customint1))) {
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
+        if ($data->roleid and $DB->record_exists('ilios', array('id'=>$data->customint1school))) {
+            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1school, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
             if ($instance) {
                 $instanceid = $instance->id;
             } else {
@@ -292,8 +294,8 @@ class enrol_ilios_plugin extends enrol_plugin {
             $trace->finished();
 
         } else if ($this->get_config('unenrolaction') == ENROL_EXT_REMOVED_SUSPENDNOROLES) {
-            $data->customint1 = 0;
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
+            $data->customint1school = 0;
+            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1school, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
 
             if ($instance) {
                 $instanceid = $instance->id;
@@ -359,4 +361,157 @@ class enrol_ilios_plugin extends enrol_plugin {
  */
 function enrol_ilios_allow_group_member_remove($itemid, $groupid, $userid) {
     return false;
+}
+
+
+/**
+ * Ilios API 1.0 Client for using JWT access tokens.
+ *
+ * @package   enrol_ilios
+ * @copyright Carson Tam <carson.tam@ucsf.edu>
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class ilios_client extends curl {
+    /** @const API URL */
+    const API_URL = '/api/v1';
+    const AUTH_URL = '/auth/login';
+
+    /** var string ilios hostname */
+    private $hostname = '';
+    /** var string API base URL */
+    private $apibaseurl = '';
+    /** var string The client ID. */
+    private $clientid = '';
+    /** var string The client secret. */
+    private $clientsecret = '';
+    /** var string JWT token */
+    private $accesstoken = null;
+
+    /**
+     * Constructor.
+     *
+     * @param string $hostname
+     * @param string $clientid
+     * @param string $clientsecret
+     */
+    public function __construct($hostname, $clientid = '', $clientsecret = '', $clienttoken = '') {
+        parent::__construct();
+        $this->hostname = $hostname;
+        $this->apibaseurl = $this->hostname . self::API_URL;
+        $this->clientid = $clientid;
+        $this->clientsecret = $clientsecret;
+        if (empty($clienttoken)) {
+            $this->accesstoken = $this->get_new_token();
+        } else {
+            $atoken = new stdClass;
+            $atoken->token = $clienttoken;
+            $atoken->expires = false;
+            $this->accesstoken = $atoken;
+        }
+    }
+
+
+
+    /**
+     * Get Ilios json object and return PHP object
+     *
+     * @param string $object API object name (camel case)
+     * @param array  $filters e.g. array('id' => 3)
+     */
+    public function get($object, $filters='', $sortorder='') {
+
+        // experiment
+        // $params = array('password' => "demofaculty1",
+        //                 'username' => "demo_faculty1");
+        // echo "<pre>";
+        // print_r( parent::post( "https://ilios3-demo.ucsf.edu/auth/login", $params ) );
+        // die();
+        // echo "</pre>";
+
+        if (empty($this->accesstoken)) {
+            throw new moodle_exception( 'Error' );
+        }
+        $token = $this->accesstoken->token;
+        $this->resetHeader();
+        $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
+        $url = $this->apibaseurl . '/' . strtolower($object);
+        $filterstring = '';
+        if (is_array($filters)) {
+            foreach ($filters as $param => $value) {
+                if ('' === $filterstring) {
+                    $filterstring = "?filters[$param]=$value";
+                } else {
+                    $filterstring .= "&filters[$param]=$value";
+                }
+            }
+        }
+
+        if (is_array($sortorder)) {
+            foreach ($sortorder as $param => $value) {
+                if ('' === $filterstring) {
+                    $filterstring = "?order_by[$param]=$value";
+                } else {
+                    $filterstring .="&order_by[$param]=$value";
+                }
+            }
+        }
+        $url .= $filterstring;
+
+        $results = parent::get($url);
+        $obj = json_decode($results);
+        if ($obj === null) {
+            return $obj;
+        } else {
+            if (isset($obj->$object)) {
+                return $obj->$object;
+            } else {
+                echo $url;
+                throw new moodle_exception( "Error $obj->code: $obj->message" );
+            }
+        }
+    }
+
+    /**
+     * Get new token
+     */
+    protected function get_new_token() {
+        $atoken = new stdClass;
+
+        if (empty($this->clientid) || empty($this->clientsecret)) {
+            return $this->accesstoken;
+        } else {
+            $params = array('password' => $this->clientsecret, 'username' => $this->clientid);
+            // echo "$result = parent::post($this->hostname . self::AUTH_URL, $params);";
+            // print_r($params);
+            $result = parent::post($this->hostname . self::AUTH_URL, $params);
+            $parsed_result = $this->parse_result($result);
+            $atoken->token = $parsed_result->jwt;
+            $atoken->expires = (time() + 3600);  // make it expires in an hour
+            return $atoken;
+        }
+    }
+
+    /**
+     * A method to parse oauth response to get oauth_token and oauth_token_secret
+     * @param string $str
+     * @return array
+     */
+    public function parse_result($str) {
+        if (empty($str)) {
+            throw new moodle_exception('error');
+        }
+        $result = json_decode($str);
+
+        if (empty($result)) {
+            throw new moodle_exception('error');
+        }
+
+        if (isset($result->errors)) {
+            throw new moodle_exception(print_r($result->errors[0]));
+        }
+
+        return $result;
+    }
+
+
 }

@@ -25,19 +25,36 @@
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/formslib.php");
+require_once("lib.php");
 
 class enrol_ilios_edit_form extends moodleform {
 
+    private $httpIlios = null;
+
     function definition() {
-        global $CFG, $DB;
+        global $CFG, $DB, $PAGE;
 
         $mform  = $this->_form;
+        $PAGE->requires->yui_module('moodle-enrol_ilios-groupchoosers', 'M.enrol_ilios.init_groupchoosers',
+                array(array('formid' => $mform->getAttribute('id'))));
 
         list($instance, $plugin, $course) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
-        $enrol = enrol_get_plugin('ilios');
+        // $enrol = enrol_get_plugin('ilios');
+        $enrol = $plugin;
+        $iliosarray = array();
 
+        if (!isset($CFG->ilios_http)) {
+            // echo "<pre>"; debug_print_backtrace(); echo "</pre>";
+            $CFG->ilios_http = new ilios_client($enrol->get_config('host_url'),
+                                                $enrol->get_config('userid'),
+                                                $enrol->get_config('secret'),
+                                                $enrol->get_config('apikey'));
+        }
+        if ($this->httpIlios === null) {
+            $this->httpIlios = $CFG->ilios_http;
+        }
 
         $groups = array(0 => get_string('none'));
         foreach (groups_get_all_groups($course->id) as $group) {
@@ -53,96 +70,90 @@ class enrol_ilios_edit_form extends moodleform {
                          ENROL_INSTANCE_DISABLED => get_string('no'));
         $mform->addElement('select', 'status', get_string('status', 'enrol_ilios'), $options);
 
-        if ($instance->id) {
-            $schools = array('' => get_string('choosedots'),
-                             '1' => 'School of Dentistry',
-                             '2' => 'School of Medicine',
-                             '3' => 'School of Nursing',
-                             '4' => 'School of Pharmcy');
-            $mform->addElement('select', 'customint1', get_string('school', 'enrol_ilios'), $schools);
-            $mform->setConstant('customint1', $instance->customint1);
-            $mform->hardFreeze('customint1', $instance->customint1);
+        $http = $this->httpIlios;
 
+        $schools = $http->get('schools');
+        // Check $schools: may not return an object.
+        if ($schools === null) { // no connection to the server
+            $schooloptions = array('' => get_string('error'));
         } else {
-            $schools = array('' => get_string('choosedots'),
-                             '1' => 'School of Dentistry',
-                             '2' => 'School of Medicine',
-                             '3' => 'School of Nursing',
-                             '4' => 'School of Pharmcy');
-            $mform->addElement('select', 'customint1', get_string('school', 'enrol_ilios'), $schools);
-            $mform->addRule('customint1', get_string('required'), 'required', null, 'client');
+            $schooloptions = array('' => get_string('choosedots'));
+
+            foreach ($schools as $school) {
+                if ($school->deleted) {
+                    $iliosarray['schools'][$school->id]['title'] = $schooloptions[ $school->id ] = '*'.$school->title;
+                } else {
+                    $iliosarray['schools'][$school->id]['title'] = $schooloptions[ $school->id ] = $school->title;
+                }
+            }
         }
 
         if ($instance->id) {
-            $programs = array('' => get_string('choosedots'),
-                             '1' => 'Curriculum Ambassadors Program',
-                             '2' => 'Doctor of Medicine',
-                             '3' => 'Family Nursing',
-                             '4' => 'Foundations of Patient Care');
+            $mform->addElement('select', 'selectschool', get_string('school', 'enrol_ilios'), $schooloptions);
+            // TODO: Worry about getting the these values later
+            // $formoptions = json_decode($instance->customtext1);
+            // $mform->setConstant('selectschool', $formoptions->school->id);
+            // $mform->hardFreeze('selectschool', $formoptions->school->id);
+        } else {
+            $mform->addElement('select', 'selectschool', get_string('school', 'enrol_ilios'), $schooloptions);
+            $mform->addRule('selectschool', get_string('required'), 'required', null, 'client');
+            $mform->registerNoSubmitButton('updateschooloptions');
+            $mform->addElement('submit', 'updateschooloptions', get_string('schooloptionsupdate', 'enrol_ilios'));
+        }
+
+        $programs = array('' => get_string('choosedots'));
+        if ($instance->id) {
             $mform->addElement('select', 'customint2', get_string('program', 'enrol_ilios'), $programs);
             $mform->setConstant('customint2', $instance->customint2);
             $mform->hardFreeze('customint2', $instance->customint2);
 
         } else {
-            $programs = array('' => get_string('choosedots'),
-                             '1' => 'Curriculum Ambassadors Program',
-                             '2' => 'Doctor of Medicine',
-                             '3' => 'Family Nursing',
-                             '4' => 'Foundations of Patient Care');
             $mform->addElement('select', 'customint2', get_string('program', 'enrol_ilios'), $programs);
             $mform->addRule('customint2', get_string('required'), 'required', null, 'client');
+            $mform->addHelpButton('customint2', 'program', 'enrol_ilios');
+            $mform->disabledIf('customint2', 'selectschool', 'eq', '');
+            $mform->registerNoSubmitButton('updateprogramoptions');
+            $mform->addElement('submit', 'updateprogramoptions', get_string('programoptionsupdate', 'enrol_ilios'));
         }
 
+        $programyears = array('' => get_string('choosedots'));
         if ($instance->id) {
-            $programyears = array('' => get_string('choosedots'),
-                             '1' => 'Class of 2015',
-                             '2' => 'Class of 2016',
-                             '3' => 'Class of 2017',
-                             '4' => 'Class of 2018');
             $mform->addElement('select', 'customint3', get_string('programyear', 'enrol_ilios'), $programyears);
             $mform->setConstant('customint3', $instance->customint3);
             $mform->hardFreeze('customint3', $instance->customint3);
 
         } else {
-            $programyears = array('' => get_string('choosedots'),
-                             '1' => 'Class of 2015',
-                             '2' => 'Class of 2016',
-                             '3' => 'Class of 2017',
-                             '4' => 'Class of 2018');
             $mform->addElement('select', 'customint3', get_string('programyear', 'enrol_ilios'), $programyears);
             $mform->addRule('customint3', get_string('required'), 'required', null, 'client');
+            $mform->disabledIf('customint3', 'customint2', 'eq', '');
+            $mform->registerNoSubmitButton('updateprogramyearoptions');
+            $mform->addElement('submit', 'updateprogramyearoptions', get_string('programyearoptionsupdate', 'enrol_ilios'));
         }
 
+        $learnergroups = array('' => get_string('choosedots'));
         if ($instance->id) {
-            $groups = array('' => get_string('choosedots'),
-                            '1' => 'ECSG 1',
-                            '2' => 'ECSG 2',
-                            '3' => 'ECSG 3',
-                            '4' => 'ECSG 4',
-                            '5' => 'ECSG 5',
-                            '6' => 'ECSG 6',
-                            '7' => 'Learner group example',
-                            '8' => 'Learner group example / subgroup 1',
-                            '9' => 'Learner group example / subgroup 2',
-                            '10' => 'Learner group example / subgroup 1 / sub-subgroup');
-            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $groups);
+            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $learnergroups);
             $mform->setConstant('customint4', $instance->customint4);
             $mform->hardFreeze('customint4', $instance->customint4);
 
         } else {
-            $groups = array('' => get_string('choosedots'),
-                            '1' => 'ECSG 1',
-                            '2' => 'ECSG 2',
-                            '3' => 'ECSG 3',
-                            '4' => 'ECSG 4',
-                            '5' => 'ECSG 5',
-                            '6' => 'ECSG 6',
-                            '7' => 'Learner group example',
-                            '8' => 'Learner group example / subgroup 1',
-                            '9' => 'Learner group example / subgroup 2',
-                            '10' => 'Learner group example / subgroup 1 / sub-subgroup');
-            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $groups);
+            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $learnergroups);
             $mform->addRule('customint4', get_string('required'), 'required', null, 'client');
+            $mform->disabledIf('customint4', 'customint3', 'eq', '');
+            $mform->registerNoSubmitButton('updategroupoptions');
+            $mform->addElement('submit', 'updategroupoptions', get_string('groupoptionsupdate', 'enrol_ilios'));
+        }
+
+        $subgroups = array('' => get_string('none'));
+        if ($instance->id) {
+            $mform->addElement('select', 'customint5', get_string('subgroup', 'enrol_ilios'), $subgroups);
+            $mform->setConstant('customint5', $instance->customint5);
+            $mform->hardFreeze('customint5', $instance->customint5);
+
+        } else {
+            $mform->addElement('select', 'customint5', get_string('subgroup', 'enrol_ilios'), $subgroups);
+            //$mform->addRule('customint5', get_string('required'), 'required', null, 'client');
+            $mform->disabledIf('customint5', 'customint4', 'eq', '');
         }
 
         // if ($instance->id) {
@@ -188,7 +199,7 @@ class enrol_ilios_edit_form extends moodleform {
                 $roles[$instance->roleid] = get_string('error');
             }
         }
-        $mform->addElement('select', 'customint2', get_string('addgroup', 'enrol_ilios'), $groups);
+        $mform->addElement('select', 'customint6', get_string('addgroup', 'enrol_ilios'), $groups);
 
         $mform->addElement('hidden', 'courseid', null);
         $mform->setType('courseid', PARAM_INT);
@@ -205,12 +216,91 @@ class enrol_ilios_edit_form extends moodleform {
         $this->set_data($instance);
     }
 
+    function definition_after_data() {
+        global $DB;
+        $mform = $this->_form;
+        $enrol = enrol_get_plugin('ilios');
+        $http = $this->httpIlios;
+
+        // echo "<pre>"; debug_print_backtrace(); echo "</pre>";
+
+        $schoolid = $mform->getElementValue('selectschool');
+        $programid = $mform->getElementValue('customint2');
+        $programyearid = $mform->getElementValue('customint3');
+        $cohortid = $mform->getElementValue('customint4');
+
+        if ((is_array($schoolid) && !empty($schoolid)) &&
+            (is_array($programid) && !empty($programid))) {
+            $sid = $schoolid[0];
+            $prog_el =& $mform->getElement('customint2');
+            $programoptions = array();
+
+            $programs = $http->get('programs',
+                                   array( 'owningSchool' => $sid, 'deleted' => false ),
+                                   array( 'title'=>'ASC'));
+
+            foreach ($programs as $program) {
+                $programoptions[$program->id] = $program->title;
+            }
+            $prog_el->load($programoptions);
+        }
+
+        if ((is_array($programid) && !empty($programid)) &&
+            (is_array($programyearid) && !empty($programyearid))) {
+            $pid = $programid[0];
+            $prog_el =& $mform->getElement('customint3');
+            $programyearoptions = array();
+
+            $programyears = $http->get('programYears',
+                                       array("program" => $pid, "deleted" => false),
+                                       array("startYear" => 'ASC'));
+
+            foreach ($programyears as $year) {
+                $programyearoptions[$year->id] = $year->startYear;
+            }
+            $prog_el->load($programyearoptions);
+        }
+
+        if ((is_array($programyearid) && !empty($programyearid)) &&
+            (is_array($cohortid) && !empty($cohortid))) {
+            $pid = $programyearid[0];
+            $prog_el =& $mform->getElement('customint4');
+            $cohortoptions = array();
+
+            $cohorts = $http->get('cohorts',
+                                  array("programYear" => $pid),
+                                  array("title" => "ASC"));
+
+            foreach ($cohorts as $cohort) {
+                $cohortoptions[$cohort->id] = $cohort->title;
+            }
+            $prog_el->load($cohortoptions);
+        }
+
+        if (is_array($cohortid) && !empty($cohortid)) {
+            $cid = $cohortid[0];
+            $prog_el =& $mform->getElement('customint5');
+            $groupoptions = array();
+
+            $groups = $http->get('learnerGroups',
+                                   array("cohort" => $cid),
+                                   array("title" => "ASC"));
+
+            foreach ($groups as $group) {
+                $groupoptions[$group->id] = $group->title;
+            }
+            $prog_el->load($groupoptions);
+        }
+
+    }
+
     function validation($data, $files) {
         global $DB;
 
         $errors = parent::validation($data, $files);
 
-        $params = array('roleid'=>$data['roleid'], 'customint1'=>$data['customint1'], 'courseid'=>$data['courseid'], 'id'=>$data['id']);
+        //// Check for duplicates!!!  We should check this too.
+        $params = array('roleid'=>$data['roleid'], 'customint1'=>$data['selectschool'], 'courseid'=>$data['courseid'], 'id'=>$data['id']);
         if ($DB->record_exists_select('enrol', "roleid = :roleid AND customint1 = :customint1 AND courseid = :courseid AND enrol = 'ilios' AND id <> :id", $params)) {
             $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
         }

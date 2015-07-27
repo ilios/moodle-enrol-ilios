@@ -35,6 +35,7 @@ if ($ADMIN->fulltree) {
         // FIX: Change host to host_url (more descriptive)
         $settings->add(new admin_setting_configtext('enrol_ilios/host_url', get_string('host_url', 'enrol_ilios'), get_string('host_url_desc', 'enrol_ilios'), 'localhost'));
         $settings->add(new admin_setting_configtext('enrol_ilios/apikey', get_string('apikey', 'enrol_ilios'), get_string('apikey_desc', 'enrol_ilios'), ''));
+        $settings->add(new admin_setting_configtext('enrol_ilios/userid', get_string('userid', 'enrol_ilios'), get_string('userid_desc', 'enrol_ilios'), ''));
         $settings->add(new admin_setting_configpasswordunmask('enrol_ilios/secret', get_string('secret', 'enrol_ilios'), get_string('secret_desc', 'enrol_ilios'), ''));
         $options = get_default_enrol_roles(context_system::instance());
         $student = get_archetype_roles('student');
