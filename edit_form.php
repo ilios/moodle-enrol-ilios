@@ -261,7 +261,8 @@ class enrol_ilios_edit_form extends moodleform {
             }
             foreach ($cohorts as $cohort) {
                 if (isset($programyearoptions[$cohort->programYear])) {
-                    $programyearoptions[$cohort->programYear] = $cohort->title;
+                    $programyearoptions[$cohort->programYear] .= ' / '.$cohort->title
+                                                              . ' (' . count($cohort->learnerGroups).')';
                 }
             }
             $prog_el->load($programyearoptions);
@@ -277,13 +278,17 @@ class enrol_ilios_edit_form extends moodleform {
                                   array("programYear" => $pid),
                                   array("title" => "ASC"));
             foreach ($cohorts as $cohort) {
-                $cohortoptions['cohort:'.$cohort->id] = $cohort->title . ' ('. count($cohort->users) .')';
+                $cohortoptions['cohort:'.$cohort->id] = $cohort->title.
+                                        ' ('. count($cohort->learnerGroups).')'.
+                                        ' ('. count($cohort->users) .')';
                 $learnergroups = $http->get('learnerGroups',
                                             array('cohort' => $cohort->id, 'parent' => 'null'),
                                             array('title' => "ASC"));
                 if (is_array($learnergroups)) {
                     foreach ($learnergroups as $group) {
-                        $cohortoptions['learnerGroup:'.$group->id] = $cohort->title . ' / ' . $group->title. ' ('. count($group->users) .')';
+                        $cohortoptions['learnerGroup:'.$group->id] = $cohort->title . ' / ' . $group->title.
+                                                      ' ('. count($group->children) .')'.
+                                                      ' ('. count($group->users) .')';
                     }
                 }
             }
@@ -301,14 +306,18 @@ class enrol_ilios_edit_form extends moodleform {
                                      array("parent" => $gid),
                                      array("title" => "ASC"));
                 foreach ($groups as $group) {
-                    $groupoptions[$group->id] = $group->title. ' ('. count($group->users) .')';
+                    $groupoptions[$group->id] = $group->title.
+                                              ' ('. count($group->children) .')'.
+                                              ' ('. count($group->users) .')';
                     if (!empty($group->children)) {
                         $processchildren = function ($parent) use (&$processchildren,&$groupoptions) {
-                            foreach( $parent->children as $gid) {
-                                $subgrp = $http->get('learnerGroup',
-                                                     array( 'id' => $gid ),
-                                                     array( 'title' => "ASC"));
-                                $groupoptions[$subgrp->id] = $parent->title.' / '.$subgrp->title. ' ('. count($subgrp->users) .')';
+                            $subgroups = $http->get('learnerGroup',
+                                                    array( 'parent' => $parent->id),
+                                                    array( 'title' => "ASC"));
+                            foreach ($subgroups as $subgrp) {
+                                $groupoptions[$subgrp->id] = $parent->title.' / '.$subgrp->title.
+                                                           ' ('. count($subgrp->children) .')'.
+                                                           ' ('. count($subgrp->users) .')';
                                 if (!empty($grp->children)) {
                                     $processchildren($subgrp);
                                 }
