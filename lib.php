@@ -435,7 +435,7 @@ class ilios_client extends curl {
         $this->resetHeader();
         $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
         $url = $this->apibaseurl . '/' . strtolower($object);
-        $filterstring = '';
+        $filterstring = '?limit=100';
         if (is_array($filters)) {
             foreach ($filters as $param => $value) {
                 if ('' === $filterstring) {

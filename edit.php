@@ -63,7 +63,7 @@ if ($instanceid) {
     $instance->customint1 = ''; // School id.
     $instance->customint2 = ''; // Program id.
     $instance->customint3 = ''; // Program Year id.
-    $instance->customint4 = ''; // Cohort / group id.
+    $instance->customchar1 = ''; // Cohort / group id.
     $instance->customint5 = ''; // Sub group id.
     $instance->customint6 = 0;  // role id.
     // Let's try something more streamline:
@@ -98,7 +98,7 @@ if ($mform->is_cancelled()) {
         $instance->customint1   = $data->selectschool;
         $instance->customint2   = $data->customint2;
         $instance->customint3   = $data->customint3;
-        $instance->customint4   = $data->customint4;
+        $instance->customchar1  = $data->customchar1;
         $instance->customint5   = $data->customint5;
         $instance->customint6   = $data->customint6;
         $instance->timemodified = time();
@@ -108,7 +108,7 @@ if ($mform->is_cancelled()) {
                                             'customint1'=>$data->selectschool,
                                             'customint2'=>$data->customint2,
                                             'customint3'=>$data->customint3,
-                                            'customint4'=>$data->customint4,
+                                            'customchar1'=>$data->customchar1,
                                             'customint5'=>$data->customint5,
                                             'roleid'=>$data->roleid, 'customint6'=>$data->customint6));
     }

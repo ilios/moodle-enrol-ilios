@@ -132,14 +132,14 @@ class enrol_ilios_edit_form extends moodleform {
 
         $learnergroups = array('' => get_string('choosedots'));
         if ($instance->id) {
-            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $learnergroups);
-            $mform->setConstant('customint4', $instance->customint4);
-            $mform->hardFreeze('customint4', $instance->customint4);
+            $mform->addElement('select', 'customchar1', get_string('group', 'enrol_ilios'), $learnergroups);
+            $mform->setConstant('customchar1', $instance->customchar1);
+            $mform->hardFreeze('customchar1', $instance->customchar1);
 
         } else {
-            $mform->addElement('select', 'customint4', get_string('group', 'enrol_ilios'), $learnergroups);
-            $mform->addRule('customint4', get_string('required'), 'required', null, 'client');
-            $mform->disabledIf('customint4', 'customint3', 'eq', '');
+            $mform->addElement('select', 'customchar1', get_string('group', 'enrol_ilios'), $learnergroups);
+            $mform->addRule('customchar1', get_string('required'), 'required', null, 'client');
+            $mform->disabledIf('customchar1', 'customint3', 'eq', '');
             $mform->registerNoSubmitButton('updategroupoptions');
             $mform->addElement('submit', 'updategroupoptions', get_string('groupoptionsupdate', 'enrol_ilios'));
         }
@@ -153,7 +153,7 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $mform->addElement('select', 'customint5', get_string('subgroup', 'enrol_ilios'), $subgroups);
             //$mform->addRule('customint5', get_string('required'), 'required', null, 'client');
-            $mform->disabledIf('customint5', 'customint4', 'eq', '');
+            $mform->disabledIf('customint5', 'customchar1', 'eq', '');
         }
 
         // if ($instance->id) {
@@ -227,10 +227,10 @@ class enrol_ilios_edit_form extends moodleform {
         $schoolid = $mform->getElementValue('selectschool');
         $programid = $mform->getElementValue('customint2');
         $programyearid = $mform->getElementValue('customint3');
-        $cohortid = $mform->getElementValue('customint4');
+        $cohortid = $mform->getElementValue('customchar1');
 
-        if ((is_array($schoolid) && !empty($schoolid)) &&
-            (is_array($programid) && !empty($programid))) {
+        if ((is_array($schoolid) && !empty($schoolid[0])) &&
+            (is_array($programid) && !empty($programid[0]))) {
             $sid = $schoolid[0];
             $prog_el =& $mform->getElement('customint2');
             $programoptions = array();
@@ -245,8 +245,8 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el->load($programoptions);
         }
 
-        if ((is_array($programid) && !empty($programid)) &&
-            (is_array($programyearid) && !empty($programyearid))) {
+        if ((is_array($programid) && !empty($programid[0])) &&
+            (is_array($programyearid) && !empty($programyearid[0]))) {
             $pid = $programid[0];
             $prog_el =& $mform->getElement('customint3');
             $programyearoptions = array();
@@ -254,44 +254,72 @@ class enrol_ilios_edit_form extends moodleform {
             $programyears = $http->get('programYears',
                                        array("program" => $pid, "deleted" => false),
                                        array("startYear" => 'ASC'));
+            $cohorts = $http->get('cohorts');
 
             foreach ($programyears as $year) {
                 $programyearoptions[$year->id] = $year->startYear;
             }
+            foreach ($cohorts as $cohort) {
+                if (isset($programyearoptions[$cohort->programYear])) {
+                    $programyearoptions[$cohort->programYear] = $cohort->title;
+                }
+            }
             $prog_el->load($programyearoptions);
         }
 
-        if ((is_array($programyearid) && !empty($programyearid)) &&
-            (is_array($cohortid) && !empty($cohortid))) {
+        if ((is_array($programyearid) && !empty($programyearid[0])) &&
+            (is_array($cohortid) && !empty($cohortid[0]))) {
             $pid = $programyearid[0];
-            $prog_el =& $mform->getElement('customint4');
+            $prog_el =& $mform->getElement('customchar1');
             $cohortoptions = array();
 
             $cohorts = $http->get('cohorts',
                                   array("programYear" => $pid),
                                   array("title" => "ASC"));
-
             foreach ($cohorts as $cohort) {
-                $cohortoptions[$cohort->id] = $cohort->title;
+                $cohortoptions['cohort:'.$cohort->id] = $cohort->title . ' ('. count($cohort->users) .')';
+                $learnergroups = $http->get('learnerGroups',
+                                            array('cohort' => $cohort->id, 'parent' => 'null'),
+                                            array('title' => "ASC"));
+                if (is_array($learnergroups)) {
+                    foreach ($learnergroups as $group) {
+                        $cohortoptions['learnerGroup:'.$group->id] = $cohort->title . ' / ' . $group->title. ' ('. count($group->users) .')';
+                    }
+                }
             }
             $prog_el->load($cohortoptions);
         }
 
-        if (is_array($cohortid) && !empty($cohortid)) {
-            $cid = $cohortid[0];
+        if (is_array($cohortid) && !empty($cohortid[0])) {
+            list($gtype, $gid) = explode(':', $cohortid[0] );
+
             $prog_el =& $mform->getElement('customint5');
             $groupoptions = array();
 
-            $groups = $http->get('learnerGroups',
-                                   array("cohort" => $cid),
-                                   array("title" => "ASC"));
-
-            foreach ($groups as $group) {
-                $groupoptions[$group->id] = $group->title;
+            if ($gtype == 'learnerGroup') {
+                $groups = $http->get('learnerGroups',
+                                     array("parent" => $gid),
+                                     array("title" => "ASC"));
+                foreach ($groups as $group) {
+                    $groupoptions[$group->id] = $group->title. ' ('. count($group->users) .')';
+                    if (!empty($group->children)) {
+                        $processchildren = function ($parent) use (&$processchildren,&$groupoptions) {
+                            foreach( $parent->children as $gid) {
+                                $subgrp = $http->get('learnerGroup',
+                                                     array( 'id' => $gid ),
+                                                     array( 'title' => "ASC"));
+                                $groupoptions[$subgrp->id] = $parent->title.' / '.$subgrp->title. ' ('. count($subgrp->users) .')';
+                                if (!empty($grp->children)) {
+                                    $processchildren($subgrp);
+                                }
+                            }
+                        };
+                        $processchildren($group);
+                    }
+                }
+                $prog_el->load($groupoptions);
             }
-            $prog_el->load($groupoptions);
         }
-
     }
 
     function validation($data, $files) {
