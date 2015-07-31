@@ -7,9 +7,9 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
         initializer : function(params) {
             if (params && params.formid) {
               var selectbuttons = { "selectschool": "updateschool",
-                                    "customint2": "updateprogram",
-                                    "customint3": "updateprogramyear",
-                                    "customchar1": "updategroup" };
+                                    "selectprogram": "updateprogram",
+                                    "selectcohort": "updatecohort",
+                                    "selectlearnergroup": "updatelearnergroup" };
               for (var sel in selectbuttons) {
                 var updatebutton = Y.one('#'+params.formid+' #id_'+ selectbuttons[sel] + 'options');
                 var selectelement = Y.one('#'+params.formid+' #id_' + sel);
@@ -19,13 +19,13 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
                       var elementname = e.currentTarget.get('name');
                       switch(elementname) {
                         case 'selectschool':
-                             var select2 = Y.one('#'+params.formid+' #id_' + 'customint2');
+                             var select2 = Y.one('#'+params.formid+' #id_' + 'selectprogram');
                              select2.set('value', '');
-                        case 'customint2':
-                             var select3 = Y.one('#'+params.formid+' #id_' + 'customint3');
+                        case 'selectprogram':
+                             var select3 = Y.one('#'+params.formid+' #id_' + 'selectcohort');
                              select3.set('value', '');
-                        case 'customint3':
-                             var select4 = Y.one('#'+params.formid+' #id_' + 'customchar1');
+                        case 'selectcohort':
+                             var select4 = Y.one('#'+params.formid+' #id_' + 'selectlearnergroup');
                              select4.set('value', '');
                         default:
                             updatebutton.simulate('click');

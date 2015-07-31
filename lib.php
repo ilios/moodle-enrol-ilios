@@ -416,21 +416,23 @@ class ilios_client extends curl {
      * Get Ilios json object and return PHP object
      *
      * @param string $object API object name (camel case)
-     * @param array  $filters e.g. array('id' => 3)
+     * @param array  $filters   e.g. array('id' => 3)
+     * @param array  $sortorder e.g. array('title' => "ASC")
      */
     public function get($object, $filters='', $sortorder='') {
-
-        // experiment
-        // $params = array('password' => "demofaculty1",
-        //                 'username' => "demo_faculty1");
-        // echo "<pre>";
-        // print_r( parent::post( "https://ilios3-demo.ucsf.edu/auth/login", $params ) );
-        // die();
-        // echo "</pre>";
 
         if (empty($this->accesstoken)) {
             throw new moodle_exception( 'Error' );
         }
+
+        if ($this->accesstoken->expires && (time() > $this->accesstoken->expires)) {
+            $this->accesstoken = $this->get_new_token();
+
+            if (empty($this->accesstoken)) {
+                throw new moodle_exception( 'Error' );
+            }
+        }
+
         $token = $this->accesstoken->token;
         $this->resetHeader();
         $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
@@ -438,8 +440,10 @@ class ilios_client extends curl {
         $filterstring = '?limit=100';
         if (is_array($filters)) {
             foreach ($filters as $param => $value) {
-                if ('' === $filterstring) {
-                    $filterstring = "?filters[$param]=$value";
+                if (is_array( $value )) {
+                    foreach ($value as $val) {
+                        $filterstring .= "&filters[$param][]=$val";
+                    }
                 } else {
                     $filterstring .= "&filters[$param]=$value";
                 }
