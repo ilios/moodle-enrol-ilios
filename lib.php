@@ -87,23 +87,25 @@ class enrol_ilios_plugin extends enrol_plugin {
     protected function can_add_new_instances($courseid) {
         global $DB;
 
+        // TODO: Should our capabilities depends on moodle/cohort:view? Probably not, right?!
         $coursecontext = context_course::instance($courseid);
         if (!has_capability('moodle/course:enrolconfig', $coursecontext) or !has_capability('enrol/ilios:config', $coursecontext)) {
             return false;
         }
-        list($sqlparents, $params) = $DB->get_in_or_equal($coursecontext->get_parent_context_ids());
-        $sql = "SELECT id, contextid
-                  FROM {cohort}
-                 WHERE contextid $sqlparents
-              ORDER BY name ASC";
-        $cohorts = $DB->get_records_sql($sql, $params);
-        foreach ($cohorts as $c) {
-            $context = context::instance_by_id($c->contextid);
-            if (has_capability('moodle/cohort:view', $context)) {
-                return true;
-            }
-        }
-        return false;
+        // list($sqlparents, $params) = $DB->get_in_or_equal($coursecontext->get_parent_context_ids());
+        // $sql = "SELECT id, contextid
+        //           FROM {cohort}
+        //          WHERE contextid $sqlparents
+        //       ORDER BY name ASC";
+        // $cohorts = $DB->get_records_sql($sql, $params);
+        // foreach ($cohorts as $c) {
+        //     $context = context::instance_by_id($c->contextid);
+        //     if (has_capability('moodle/cohort:view', $context)) {
+        //         return true;
+        //     }
+        // }
+        // return false;
+        return true;
     }
 
     /**
@@ -235,9 +237,15 @@ class enrol_ilios_plugin extends enrol_plugin {
             ), 'enrol');
         $button->strings_for_js(array(
             'ajaxmore',
-            'enrol',
-            'enrolusers',
-            'iliossearch',
+            'enrolilios',
+            'enrolilioscohort',
+            'enroliliosgroup',
+            'enroliliosusers',
+            'iliosgroups',
+            'iliosgroupsearch',
+            'school',
+            'program',
+            'cohort'
             ), 'enrol_ilios');
         $button->strings_for_js('assignroles', 'role');
         $button->strings_for_js('ilios', 'enrol_ilios');
@@ -516,6 +524,5 @@ class ilios_client extends curl {
 
         return $result;
     }
-
 
 }

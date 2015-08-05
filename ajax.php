@@ -63,6 +63,16 @@ $outcome->success = true;
 $outcome->response = new stdClass();
 $outcome->error = '';
 
+$enrol = enrol_get_plugin('ilios');
+if (!isset($CFG->ilios_http)) {
+    $CFG->ilios_http = new ilios_client($enrol->get_config('host_url'),
+                                        $enrol->get_config('userid'),
+                                        $enrol->get_config('secret'),
+                                        $enrol->get_config('apikey'));
+}
+
+$httpIlios = $CFG->ilios_http;
+
 switch ($action) {
     case 'getassignable':
         $otheruserroles = optional_param('otherusers', false, PARAM_BOOL);
@@ -79,6 +89,56 @@ switch ($action) {
         $outcome->response = enrol_ilios_search_cohorts($manager, $offset, 25, $search);
         // Some browsers reorder collections by key.
         $outcome->response['cohorts'] = array_values($outcome->response['cohorts']);
+        break;
+    case 'getiliosschools':
+        require_capability('moodle/course:enrolconfig', $context);
+        $offset = optional_param('offset', 0, PARAM_INT);
+        $search  = optional_param('search', '', PARAM_RAW);
+        $schools = $httpIlios->get('schools', '', array('title' => "ASC"));
+        $schoolarray = array();
+        foreach ($schools as $school) {
+            $schoolarray[$school->id] = $school->title;
+        }
+        // TODO: Some browsers reorder collections by key.
+        $outcome->response = $schoolarray;
+        break;
+    case 'getiliosprograms':
+        require_capability('moodle/course:enrolconfig', $context);
+        $offset = optional_param('offset', 0, PARAM_INT);
+        $search = optional_param('search', '', PARAM_RAW);
+        $sid    = required_param('schoolid', PARAM_INT); // school id
+        $programs = $httpIlios->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
+        $programarray = array();
+        foreach ($programs as $program) {
+            $programarray[$program->id] = $program->title;
+        }
+        $outcome->response = $programarray;
+        break;
+    case 'getilioscohorts':
+        require_capability('moodle/course:enrolconfig', $context);
+        $offset = optional_param('offset', 0, PARAM_INT);
+        $search = optional_param('search', '', PARAM_RAW);
+        $pid    = required_param('programid', PARAM_INT);
+        $programyears = $httpIlios->get('programYears',
+                                        array("program" => $pid, "deleted" => false),
+                                        array("startYear" => "ASC"));
+        $programyeararray = array();
+        $cohortoptions = array();
+        foreach ($programyears as $progyear) {
+            $programyeararray[] = $progyear->id;
+        }
+
+        if (!empty($programyeararray)) {
+            $cohorts = $httpIlios->get('cohorts',
+                                       array("programYear" => $programyeararray),
+                                       array("title" => "ASC"));
+
+            foreach ($cohorts as $cohort) {
+                $cohortoptions[$cohort->id] = $cohort->title
+                                            .' ('.count($cohort->learnerGroups).')' ;
+            }
+        }
+        $outcome->response = $cohortoptions;
         break;
     case 'enrolilios':
         require_capability('moodle/course:enrolconfig', $context);

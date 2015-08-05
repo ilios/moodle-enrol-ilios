@@ -28,7 +28,7 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
                              var select4 = Y.one('#'+params.formid+' #id_' + 'selectlearnergroup');
                              select4.set('value', '');
                         default:
-                            updatebutton.simulate('click');
+                             updatebutton.simulate('click');
                       }
                     });
                 }

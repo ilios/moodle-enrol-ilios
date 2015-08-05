@@ -104,22 +104,62 @@ if ($mform->is_cancelled()) {
         // $instance->customchar1  = $data->customchar1;
         // $instance->customint5   = $data->customint5;
         // $instance->customint6   = $data->customint6;
-        $instance->customchar1  = $data->syncfield;
-        $instance->customint1   = $data->syncid;
-        $instance->customtext1  = $data->syncinfo;
+        $syncinfo = array( "school" => array( "id" => $data->selectschool ),
+                           "program" => array( "id" => $data->selectprogram ) );
+        if (empty($data->selectsubgroup)) {
+            if (empty($data->selectlearnergroup)) {
+                $synctype = 'cohort';
+                $syncid = $data->selectcohort;
+                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+            } else {
+                $synctype = 'learnerGroup';
+                $syncid = $data->selectlearnergroup;
+                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+                $syncinfo["learnerGroup"] = array( "id" => $data->selectlearnergroup );
+            }
+        } else {
+            $synctype = 'learnerGroup';
+            $syncid = $data->selectsubgroup;
+            $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+            $syncinfo["learnerGroup"] = array( "id" => $data->selectsubgroup );
+        }
+
+        $instance->customchar1  = $synctype;
+        $instance->customint1   = $syncid;
+        $instance->customtext1  = json_encode($syncinfo);
         $instance->customint6   = $data->customint6;
         $instance->timemodified = time();
         $DB->update_record('enrol', $instance);
     }  else {
+        $syncinfo = array( "school" => array( "id" => $data->selectschool ),
+                           "program" => array( "id" => $data->selectprogram ) );
+        if (empty($data->selectsubgroup)) {
+            if (empty($data->selectlearnergroup)) {
+                $synctype = 'cohort';
+                $syncid = $data->selectcohort;
+                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+            } else {
+                $synctype = 'learnerGroup';
+                $syncid = $data->selectlearnergroup;
+                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+                $syncinfo["learnerGroup"] = array( "id" => $data->selectlearnergroup );
+            }
+        } else {
+            $synctype = 'learnerGroup';
+            $syncid = $data->selectsubgroup;
+            $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+            $syncinfo["learnerGroup"] = array( "id" => $data->selectsubgroup );
+        }
+
         $enrol->add_instance($course, array('name'=>$data->name, 'status'=>$data->status,
                                             // 'customint1'=>$data->selectschool,
                                             // 'customint2'=>$data->customint2,
                                             // 'customint3'=>$data->customint3,
                                             // 'customchar1'=>$data->customchar1,
                                             // 'customint5'=>$data->customint5,
-                                            'customchar1'=>$data->syncfield,
-                                            'customint1'=>$data->syncid,
-                                            'customtext1'=>$data->syncinfo,
+                                            'customchar1'=>$synctype,
+                                            'customint1'=>$syncid,
+                                            'customtext1'=>json_encode($syncinfo),
                                             'roleid'=>$data->roleid,
                                             'customint6'=>$data->customint6));
     }

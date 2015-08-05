@@ -62,7 +62,7 @@ class enrol_ilios_edit_form extends moodleform {
                          ENROL_INSTANCE_DISABLED => get_string('no'));
         $mform->addElement('select', 'status', get_string('status', 'enrol_ilios'), $options);
 
-        // $http = $this->httpIlios;
+        $http = $this->httpIlios;
 
         // $schools = $http->get('schools');
         // // Check $schools: may not return an object.
@@ -81,12 +81,65 @@ class enrol_ilios_edit_form extends moodleform {
         // }
 
         $schooloptions = array('' => get_string('choosedots'));
+        $programoptions = array('' => get_string('choosedots'));
+        $cohortoptions = array('' => get_string('choosedots'));
+        $learnergroupoptions = array('' => get_string('none'));
+        $subgroupoptions = array('' => get_string('none'));
+
+        if ($instance->id) {
+            $synctype = $instance->customchar1;
+            $syncid = $instance->customint1;
+            $syncinfo = json_decode($instance->customtext1);
+
+            $instance->schoolid = $syncinfo->school->id;
+            $schools = $http->get('schools', array('id' => $instance->schoolid));
+            $school = $schools[0];
+            $schooloptions = array( "$instance->schoolid" => $school->title );
+
+            $instance->programid = $syncinfo->program->id;
+            $programs = $http->get('programs', array('id' => $instance->programid));
+            $program = $programs[0];
+            $programoptions = array( "$instance->programid" => $program->title );
+
+            $instance->cohortid = $syncinfo->cohort->id;
+            $cohorts = $http->get('cohorts', array('id' => $instance->cohortid));
+            $cohort = $cohorts[0];
+            $cohortoptions = array( "$instance->cohortid" => $cohort->title );
+
+            $instance->learnergroupid = '';
+            $instance->subgroupid = '';
+
+            if ($synctype == 'learnerGroup') {
+                $instance->learnergroupid = $syncinfo->learnerGroup->id;
+                $groups = $http->get('learnerGroups', array('id' => $instance->learnergroupid));
+                $group = $groups[0];
+                $learnergroupoptions = array("$instance->learnergroupid" => $group->title);
+
+                if (!empty($group->parent)) {
+                    $grouptitle = $group->title;
+                    $processparents = function ($child) use (&$processparents,
+                                                             &$learnergroupoptions,
+                                                             &$grouptitle,
+                                                             $http) {
+                        $parentgroup = $http->get('learnerGroups', array('id' => $child->parent));
+                        $instance->learnergroupid = $parentgroup->id;
+                        $learnergroupoptions = array( "$instance->learnergroupid" => $parentgroup->title);
+                        if (!empty($parentgroup->parent)){
+                            $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                            $processparents($parentgroup);
+                        }
+                    };
+                    $processparents($group);
+                    $instance->subgroupid = $group->id;
+                    $subgroupoptions = array("$group->id" => $grouptitle);
+                }
+            }
+        }
+
         if ($instance->id) {
             $mform->addElement('select', 'selectschool', get_string('school', 'enrol_ilios'), $schooloptions);
-            // TODO: Worry about getting the these values later
-            // $formoptions = json_decode($instance->customtext1);
-            // $mform->setConstant('selectschool', $formoptions->school->id);
-            // $mform->hardFreeze('selectschool', $formoptions->school->id);
+            $mform->setConstant('selectschool', $instance->schoolid);
+            $mform->hardFreeze('selectschool', $instance->schoolid);
         } else {
             $mform->addElement('select', 'selectschool', get_string('school', 'enrol_ilios'), $schooloptions);
             $mform->addRule('selectschool', get_string('required'), 'required', null, 'client');
@@ -94,15 +147,14 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->addElement('submit', 'updateschooloptions', get_string('schooloptionsupdate', 'enrol_ilios'));
         }
 
-        $programs = array('' => get_string('choosedots'));
         if ($instance->id) {
-            $mform->addElement('select', 'selectprogram', get_string('program', 'enrol_ilios'), $programs);
+            $mform->addElement('select', 'selectprogram', get_string('program', 'enrol_ilios'), $programoptions);
             // TODO: need to get this from customtext1
-            $mform->setConstant('selectprogram', $instance->customint2);
-            $mform->hardFreeze('selectprogram', $instance->customint2);
+            $mform->setConstant('selectprogram', $instance->programid);
+            $mform->hardFreeze('selectprogram', $instance->programid);
 
         } else {
-            $mform->addElement('select', 'selectprogram', get_string('program', 'enrol_ilios'), $programs);
+            $mform->addElement('select', 'selectprogram', get_string('program', 'enrol_ilios'), $programoptions);
             $mform->addRule('selectprogram', get_string('required'), 'required', null, 'client');
             $mform->addHelpButton('selectprogram', 'program', 'enrol_ilios');
             $mform->disabledIf('selectprogram', 'selectschool', 'eq', '');
@@ -110,43 +162,40 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->addElement('submit', 'updateprogramoptions', get_string('programoptionsupdate', 'enrol_ilios'));
         }
 
-        $cohorts = array('' => get_string('choosedots'));
         if ($instance->id) {
-            $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohorts);
+            $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohortoptions);
             // TODO: use customtext1
-            $mform->setConstant('selectcohort', $instance->customint3);
-            $mform->hardFreeze('selectcohort', $instance->customint3);
+            $mform->setConstant('selectcohort', $instance->cohortid);
+            $mform->hardFreeze('selectcohort', $instance->cohortid);
 
         } else {
-            $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohorts);
+            $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohortoptions);
             $mform->addRule('selectcohort', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectcohort', 'selectprogram', 'eq', '');
             $mform->registerNoSubmitButton('updatecohortoptions');
             $mform->addElement('submit', 'updatecohortoptions', get_string('cohortoptionsupdate', 'enrol_ilios'));
         }
 
-        $learnergroups = array('' => get_string('none'));
         if ($instance->id) {
-            $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroups);
-            $mform->setConstant('selectlearnergroup', $instance->customchar1);
-            $mform->hardFreeze('selectlearnergroup', $instance->customchar1);
+            $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroupoptions);
+            $mform->setConstant('selectlearnergroup', $instance->learnergroupid);
+            $mform->hardFreeze('selectlearnergroup', $instance->learnergroupid);
 
         } else {
-            $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroups);
+            $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroupoptions);
             // $mform->addRule('selectlearnergroup', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
             $mform->registerNoSubmitButton('updatelearnergroupoptions');
             $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
         }
 
-        $subgroups = array('' => get_string('none'));
         if ($instance->id) {
-            $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroups);
-            $mform->setConstant('selectsubgroup', $instance->customint5);
-            $mform->hardFreeze('selectsubgroup', $instance->customint5);
+            $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroupoptions);
+            $mform->setConstant('selectsubgroup', $instance->subgroupid);
+            $mform->hardFreeze('selectsubgroup', $instance->subgroupid);
 
         } else {
-            $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroups);
+            $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroupoptions);
             //$mform->addRule('selectsubgroup', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectsubgroup', 'selectlearnergroup', 'eq', '');
         }
@@ -318,7 +367,7 @@ class enrol_ilios_edit_form extends moodleform {
                                                 ' ('. count($subgroup->children) .')'.
                                                 ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
-                    $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions) {
+                    $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
                         $subgrps = $http->get('learnerGroup',
                                               array( 'parent' => $parent->id),
                                               array( 'title' => "ASC"));
@@ -343,7 +392,6 @@ class enrol_ilios_edit_form extends moodleform {
 
         $errors = parent::validation($data, $files);
 
-        //// Check for duplicates!!!  We should check this too.
         $selectgrouptype = 'cohort';
         $selectgroupid = $data['selectcohort'];
         if (!empty($data['selectlearnergroup'])){
