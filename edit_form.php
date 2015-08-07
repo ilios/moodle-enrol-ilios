@@ -120,13 +120,17 @@ class enrol_ilios_edit_form extends moodleform {
                     $processparents = function ($child) use (&$processparents,
                                                              &$learnergroupoptions,
                                                              &$grouptitle,
+                                                             &$instance,
                                                              $http) {
-                        $parentgroup = $http->get('learnerGroups', array('id' => $child->parent));
-                        $instance->learnergroupid = $parentgroup->id;
-                        $learnergroupoptions = array( "$instance->learnergroupid" => $parentgroup->title);
-                        if (!empty($parentgroup->parent)){
-                            $grouptitle = $parentgroup->title . ' / '. $grouptitle;
-                            $processparents($parentgroup);
+                        $parentgroups = $http->get('learnerGroups', array('id' => $child->parent));
+                        if (is_array($parentgroups)) {
+                            $parentgroup = $parentgroups[0];
+                            $instance->learnergroupid = $parentgroup->id;
+                            $learnergroupoptions = array( "$instance->learnergroupid" => $parentgroup->title);
+                            if (!empty($parentgroup->parent)){
+                                $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                                $processparents($parentgroup);
+                            }
                         }
                     };
                     $processparents($group);

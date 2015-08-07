@@ -136,11 +136,13 @@ class enrol_ilios_plugin extends enrol_plugin {
      * Called for all enabled enrol plugins that returned true from is_cron_required().
      * @return void
      */
-    public function cron() {
+    public function cron($trace=null) {
         global $CFG;
 
         require_once("$CFG->dirroot/enrol/ilios/locallib.php");
-        $trace = new null_progress_trace();
+        if ($trace === null) {
+            $trace = new null_progress_trace();
+        }
         enrol_ilios_sync($trace);
         $trace->finished();
     }
@@ -445,7 +447,7 @@ class ilios_client extends curl {
         $this->resetHeader();
         $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
         $url = $this->apibaseurl . '/' . strtolower($object);
-        $filterstring = '?limit=100';
+        $filterstring = '';
         if (is_array($filters)) {
             foreach ($filters as $param => $value) {
                 if (is_array( $value )) {
@@ -460,27 +462,93 @@ class ilios_client extends curl {
 
         if (is_array($sortorder)) {
             foreach ($sortorder as $param => $value) {
-                if ('' === $filterstring) {
-                    $filterstring = "?order_by[$param]=$value";
-                } else {
-                    $filterstring .="&order_by[$param]=$value";
-                }
+                $filterstring .="&order_by[$param]=$value";
             }
         }
-        $url .= $filterstring;
 
-        $results = parent::get($url);
-        $obj = json_decode($results);
-        if ($obj === null) {
-            return $obj;
-        } else {
-            if (isset($obj->$object)) {
-                return $obj->$object;
+        $limit = 50;
+        $offset = 0;
+        $retobj = array();
+        $obj = null;
+
+        do {
+            $url .= "?limit=$limit&offset=$offset".$filterstring;
+            $results = parent::get($url);
+            $obj = json_decode($results);
+
+            if ($obj !== null && isset($obj->$object) && !empty($obj->$object)) {
+                $retobj = array_merge($retobj, $obj->$object);
+                if (count($obj->$object) < $limit) {
+                    $obj = null;
+                } else {
+                    $offset += $limit;
+                }
             } else {
-                echo $url;
-                throw new moodle_exception( "Error $obj->code: $obj->message" );
+                $obj = null;
+            }
+
+        } while ($obj !== null);
+
+        return $retobj;
+    }
+
+
+    /**
+     * Get Ilios json object by IDs and return PHP object
+     *
+     * @param string $object API object name (camel case)
+     * @param string or array  $ids   e.g. array(1,2,3)
+     */
+    public function getbyids($object, $ids='') {
+
+        if (empty($this->accesstoken)) {
+            throw new moodle_exception( 'Error' );
+        }
+
+        if ($this->accesstoken->expires && (time() > $this->accesstoken->expires)) {
+            $this->accesstoken = $this->get_new_token();
+
+            if (empty($this->accesstoken)) {
+                throw new moodle_exception( 'Error' );
             }
         }
+
+        $token = $this->accesstoken->token;
+        $this->resetHeader();
+        $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
+        $url = $this->apibaseurl . '/' . strtolower($object);
+
+        $filterstrings = array();
+        if (is_numeric($ids)) {
+            $filterstrings[] = "?filters[id]=$ids";
+        } elseif (is_array($ids)) {
+            // fetch 10 at a time
+            $offset  = 0;
+            $length  = 10;
+            $remains = count($ids);
+            do {
+                $slicedids = array_slice($ids, $offset, $length);
+                $offset += $length;
+                $remains -= count($slicedids);
+
+                $filterstr = "?limit=$length";
+                foreach ($slicedids as $id) {
+                    $filterstr .= "&filters[id][]=$id";
+                }
+                $filterstrings[] = $filterstr;
+            } while ($remains > 0);
+        }
+
+        $retobj = array();
+        foreach ($filterstrings as $filterstr) {
+            $results = parent::get($url.$filterstr);
+            $obj = json_decode($results);
+
+            if ($obj !== null && isset($obj->$object) && !empty($obj->$object)) {
+                $retobj = array_merge($retobj, $obj->$object);
+            }
+        }
+        return $retobj;
     }
 
     /**
