@@ -18,7 +18,7 @@
  * Ilios enrolment plugin.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam {@email carson.tam@ucsf.edu}
+ * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -32,6 +32,29 @@ require_once $CFG->libdir.'/filelib.php';
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class enrol_ilios_plugin extends enrol_plugin {
+    /** @var object Ilios client object */
+    protected $iliosclient;
+
+    /**
+     * Constructor
+     */
+    public function __construct() {
+        $this->iliosclient = new ilios_client($this->get_config('host_url'),
+                                              $this->get_config('userid'),
+                                              $this->get_config('secret'),
+                                              $this->get_config('apikey'));
+    }
+
+    /**
+     * Returns the Ilios Client for API access
+     *
+     * @return ilios_client object
+     */
+    public function get_http_client() {
+        return $this->iliosclient;
+    }
+
+
     /**
      * Returns localised name of enrol instance.
      *
@@ -43,20 +66,30 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         if (empty($instance)) {
             $enrol = $this->get_name();
-            return get_string('pluginname', 'enrol_'.$enrol);
+            return get_string('pluginshortname', 'enrol_'.$enrol);
 
         } else if (empty($instance->name)) {
             $enrol = $this->get_name();
-            $ilios = $DB->get_record('cohort', array('id'=>$instance->customint1));
-            if (!$ilios) {
-                return get_string('pluginname', 'enrol_'.$enrol);
+
+            $syncfield = $instance->customchar1;
+            $syncid = $instance->customint1;
+
+            $groups = $this->iliosclient->getbyids($syncfield.'s', $syncid);
+
+            if (!empty($groups)) {
+                $group = $groups[0];
+                $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
+            } else {
+                $groupname = empty($instance->customchar2) ? get_string('pluginshortname', 'enrol_'.$enrol) : $instance->customchar2;
             }
-            $iliosname = format_string($ilios->name, true, array('context'=>context::instance_by_id($ilios->contextid)));
+
             if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
-                return get_string('pluginname', 'enrol_'.$enrol) . ' (' . $iliosname . ' - ' . $role .')';
+                // return get_string('pluginshortname', 'enrol_'.$enrol) . ' (' . $groupname . ' - ' . $role .')';
+                return $groupname . ' (' . $role .')';
             } else {
-                return get_string('pluginname', 'enrol_'.$enrol) . ' (' . $iliosname . ')';
+                // return get_string('pluginshortname', 'enrol_'.$enrol) . ' (' . $groupname . ')';
+                return $groupname;
             }
 
         } else {
@@ -432,14 +465,14 @@ class ilios_client extends curl {
     public function get($object, $filters='', $sortorder='') {
 
         if (empty($this->accesstoken)) {
-            throw new moodle_exception( 'Error' );
+            throw new moodle_exception( 'Error: client token is not set.' );
         }
 
         if ($this->accesstoken->expires && (time() > $this->accesstoken->expires)) {
             $this->accesstoken = $this->get_new_token();
 
             if (empty($this->accesstoken)) {
-                throw new moodle_exception( 'Error' );
+                throw new moodle_exception( 'Error: unable to renew access token.' );
             }
         }
 

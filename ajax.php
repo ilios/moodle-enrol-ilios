@@ -64,14 +64,8 @@ $outcome->response = new stdClass();
 $outcome->error = '';
 
 $enrol = enrol_get_plugin('ilios');
-if (!isset($CFG->ilios_http)) {
-    $CFG->ilios_http = new ilios_client($enrol->get_config('host_url'),
-                                        $enrol->get_config('userid'),
-                                        $enrol->get_config('secret'),
-                                        $enrol->get_config('apikey'));
-}
 
-$httpIlios = $CFG->ilios_http;
+$ilioshttpclient = $enrol->get_http_client();
 
 switch ($action) {
     case 'getassignable':
@@ -94,7 +88,7 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $offset = optional_param('offset', 0, PARAM_INT);
         $search  = optional_param('search', '', PARAM_RAW);
-        $schools = $httpIlios->get('schools', '', array('title' => "ASC"));
+        $schools = $ilioshttpclient->get('schools', '', array('title' => "ASC"));
         $schoolarray = array();
         foreach ($schools as $school) {
             $schoolarray[$school->id] = $school->title;
@@ -107,7 +101,7 @@ switch ($action) {
         $offset = optional_param('offset', 0, PARAM_INT);
         $search = optional_param('search', '', PARAM_RAW);
         $sid    = required_param('schoolid', PARAM_INT); // school id
-        $programs = $httpIlios->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
+        $programs = $ilioshttpclient->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
             $programarray[$program->id] = $program->title;
@@ -119,7 +113,7 @@ switch ($action) {
         $offset = optional_param('offset', 0, PARAM_INT);
         $search = optional_param('search', '', PARAM_RAW);
         $pid    = required_param('programid', PARAM_INT);
-        $programyears = $httpIlios->get('programYears',
+        $programyears = $ilioshttpclient->get('programYears',
                                         array("program" => $pid, "deleted" => false),
                                         array("startYear" => "ASC"));
         $programyeararray = array();
@@ -129,7 +123,7 @@ switch ($action) {
         }
 
         if (!empty($programyeararray)) {
-            $cohorts = $httpIlios->get('cohorts',
+            $cohorts = $ilioshttpclient->get('cohorts',
                                        array("programYear" => $programyeararray),
                                        array("title" => "ASC"));
 

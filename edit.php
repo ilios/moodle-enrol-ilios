@@ -18,7 +18,7 @@
  * Adds new instance of enrol_ilios to specified course.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam {@email carson.tam@ucsf.edu}
+ * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -45,6 +45,7 @@ if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
 }
 
+//xdebug_break();
 $enrol = enrol_get_plugin('ilios');
 
 if ($instanceid) {
@@ -60,16 +61,6 @@ if ($instanceid) {
     $instance->id         = null;
     $instance->courseid   = $course->id;
     $instance->enrol      = 'ilios';
-    // $instance->customint1 = ''; // School id.
-    // $instance->customint2 = ''; // Program id.
-    // $instance->customint3 = ''; // Program Year id.
-    // $instance->customchar1 = ''; // Cohort / group id.
-    // $instance->customint5 = ''; // Sub group id.
-    // $instance->customint6 = 0;  // role id.
-    // Let's try something more streamline:
-    // customint1 => cohort / group id,
-    // customchar1 => 'cohort / group',
-    // customtext1 => '{ school: { id: 1, name: 'Medicine' }, program: ... }';
     $instance->customchar1 = ''; // cohort / learnerGroup
     $instance->customint1 = '';  // cohort / leaner group id.
     $instance->customtext1 = ''; // json string of all useful values
@@ -82,13 +73,13 @@ if ($courseadmin && $courseadmin->get('users') && $courseadmin->get('users')->ge
     $courseadmin->get('users')->get('manageinstances')->make_active();
 }
 
-
 $mform = new enrol_ilios_edit_form(null, array($instance, $enrol, $course));
 
 if ($mform->is_cancelled()) {
     redirect($returnurl);
 
 } else if ($data = $mform->get_data()) {
+    // We are here only because the form is submitted.
     if ($data->id) {
         // NOTE: no cohort or learner group changes here!!!
         if ($data->roleid != $instance->roleid) {
@@ -98,12 +89,11 @@ if ($mform->is_cancelled()) {
         $instance->name         = $data->name;
         $instance->status       = $data->status;
         $instance->roleid       = $data->roleid;
-        // $instance->customint1   = $data->selectschool;
-        // $instance->customint2   = $data->customint2;
-        // $instance->customint3   = $data->customint3;
-        // $instance->customchar1  = $data->customchar1;
-        // $instance->customint5   = $data->customint5;
-        // $instance->customint6   = $data->customint6;
+
+        $selectschoolindex = $data->selectschool;
+        if (!empty($selectschoolindex)) {
+            list($schoolid, $schooltitle) = explode( ":", $selectschoolindex, 2);
+        }
         $syncinfo = array( "school" => array( "id" => $data->selectschool ),
                            "program" => array( "id" => $data->selectprogram ) );
         if (empty($data->selectsubgroup)) {
@@ -129,7 +119,9 @@ if ($mform->is_cancelled()) {
         $instance->customtext1  = json_encode($syncinfo);
         $instance->customint6   = $data->customint6;
         $instance->timemodified = time();
+
         $DB->update_record('enrol', $instance);
+
     }  else {
         $syncinfo = array( "school" => array( "id" => $data->selectschool ),
                            "program" => array( "id" => $data->selectprogram ) );
@@ -152,11 +144,6 @@ if ($mform->is_cancelled()) {
         }
 
         $enrol->add_instance($course, array('name'=>$data->name, 'status'=>$data->status,
-                                            // 'customint1'=>$data->selectschool,
-                                            // 'customint2'=>$data->customint2,
-                                            // 'customint3'=>$data->customint3,
-                                            // 'customchar1'=>$data->customchar1,
-                                            // 'customint5'=>$data->customint5,
                                             'customchar1'=>$synctype,
                                             'customint1'=>$syncid,
                                             'customtext1'=>json_encode($syncinfo),

@@ -18,7 +18,7 @@
  * Local stuff for ilios enrolment plugin.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam {@email carson.tam@ucsf.edu}
+ * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -54,16 +54,13 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
     $iliosusers = array(); // cache
 
     $plugin = enrol_get_plugin('ilios');
+    $http   = $plugin->get_http_client();
+
     $unenrolaction = $plugin->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
     // $moodleusersyncfield = 'idnumber';
     // $iliosusersyncfield = 'ucUid';
     $moodleusersyncfield = 'id';
     $iliosusersyncfield = 'id';
-
-    $http = new ilios_client( $plugin->get_config('host_url'),
-                              $plugin->get_config('userid'),
-                              $plugin->get_config('secret'),
-                              $plugin->get_config('apikey') );
 
     // Iterate through all not enrolled yet users.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";

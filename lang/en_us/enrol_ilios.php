@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'enrol_ilios', language 'en'.
+ * Strings for component 'enrol_ilios', language 'en_us'.
  *
  * @package    enrol_ilios
  * @copyright  2015 Carson Tam  <carson.tam@ucsf.edu>
@@ -29,12 +29,12 @@ $string['apikey_desc'] = 'Enter the API key obtained from your Ilios server.';
 $string['assignrole'] = 'Assign role';
 $string['cohort'] = 'Program year/Cohort (# of learner groups)';
 $string['cohortoptionsupdate'] = 'Update cohort options';
-$string['enrol'] = 'Enrol Ilios users';
-$string['enrolilios'] = 'Enrol Ilios cohort/learner group/users';
-$string['enrolilioscohort'] = 'Enrol cohort';
-$string['enroliliosgroup'] = 'Enrol group';
-$string['enroliliosusers'] = 'Enrol users';
-$string['enrolusers'] = 'Enrol users';
+$string['enrol'] = 'Enroll Ilios users';
+$string['enrolilios'] = 'Enroll Ilios cohort/learner group/users';
+$string['enrolilioscohort'] = 'Enroll cohort';
+$string['enroliliosgroup'] = 'Enroll group';
+$string['enroliliosusers'] = 'Enroll users';
+$string['enrolusers'] = 'Enroll users';
 $string['host_url'] = 'Host URL';
 $string['host_url_desc'] = 'Type Ilios server IP address or host URL.';
 $string['ilios'] = 'Ilios';
@@ -42,13 +42,13 @@ $string['ilioscohorts'] = 'Cohorts';
 $string['iliosgroups'] = 'Groups';
 $string['iliosgroupsearch'] = 'Search';
 $string['ilios:config'] = 'Configure ilios instances';
-$string['ilios:unenrol'] = 'Unenrol suspended users';
-$string['instanceexists'] = 'Ilios enrolment is already synchronised with selected role';
+$string['ilios:unenrol'] = 'Unenroll suspended users';
+$string['instanceexists'] = 'Ilios enrollment is already synchronised with selected role';
 $string['learnergroup'] = 'Learner group (# of sub-groups) (# of users)';
 $string['learnergroupoptionsupdate'] = 'Update learner group options';
-$string['pluginname'] = 'Ilios enrolment sync';
+$string['pluginname'] = 'Ilios enrollment sync';
 $string['pluginshortname'] = 'Ilios sync';
-$string['pluginname_desc'] = 'Ilios enrolment plugin synchronises members with course participants.';
+$string['pluginname_desc'] = 'Ilios enrollment plugin synchronises members with course participants.';
 $string['program'] = 'Program';
 $string['program_help'] = 'This correspond to the Programs in Ilios.';
 $string['programoptionsupdate'] = 'Update program options';
