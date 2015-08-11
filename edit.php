@@ -45,7 +45,6 @@ if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
 }
 
-//xdebug_break();
 $enrol = enrol_get_plugin('ilios');
 
 if ($instanceid) {
@@ -90,28 +89,39 @@ if ($mform->is_cancelled()) {
         $instance->status       = $data->status;
         $instance->roleid       = $data->roleid;
 
-        $selectschoolindex = $data->selectschool;
-        if (!empty($selectschoolindex)) {
-            list($schoolid, $schooltitle) = explode( ":", $selectschoolindex, 2);
+        $selectvalue = $data->selectschool;
+        if (!empty($selectvalue)) {
+            list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
+            $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
         }
-        $syncinfo = array( "school" => array( "id" => $data->selectschool ),
-                           "program" => array( "id" => $data->selectprogram ) );
-        if (empty($data->selectsubgroup)) {
-            if (empty($data->selectlearnergroup)) {
-                $synctype = 'cohort';
-                $syncid = $data->selectcohort;
-                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+
+        $selectvalue = $data->selectprogram;
+        if (!empty($selectvalue)) {
+            list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
+            $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
+        }
+
+        $selectvalue = $data->selectcohort;
+        if (!empty($selectvalue)) {
+            list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
+            $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
+
+            if (empty($data->selectsubgroup)) {
+                if (empty($data->selectlearnergroup)) {
+                    $synctype = 'cohort';
+                    $syncid = $cohortid;
+                } else {
+                    list($groupid, $grouptitle) = explode(':', $data->selectlearnergroup, 2);
+                    $synctype = 'learnerGroup';
+                    $syncid = $groupid;
+                    $syncinfo["learnerGroup"] = array( "id" => $groupid, "title" => $grouptitle );
+                }
             } else {
+                list($groupid, $grouptitle) = explode(':', $data->selectsubgroup, 2);
                 $synctype = 'learnerGroup';
-                $syncid = $data->selectlearnergroup;
-                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
-                $syncinfo["learnerGroup"] = array( "id" => $data->selectlearnergroup );
+                $syncid = $groupid;
+                $syncinfo["learnerGroup"] = array( "id" => $groupid, "title" => $grouptitle );
             }
-        } else {
-            $synctype = 'learnerGroup';
-            $syncid = $data->selectsubgroup;
-            $syncinfo["cohort"] = array( "id" => $data->selectcohort );
-            $syncinfo["learnerGroup"] = array( "id" => $data->selectsubgroup );
         }
 
         $instance->customchar1  = $synctype;
@@ -123,24 +133,40 @@ if ($mform->is_cancelled()) {
         $DB->update_record('enrol', $instance);
 
     }  else {
-        $syncinfo = array( "school" => array( "id" => $data->selectschool ),
-                           "program" => array( "id" => $data->selectprogram ) );
-        if (empty($data->selectsubgroup)) {
-            if (empty($data->selectlearnergroup)) {
-                $synctype = 'cohort';
-                $syncid = $data->selectcohort;
-                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
+
+        $selectvalue = $data->selectschool;
+        if (!empty($selectvalue)) {
+            list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
+            $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
+        }
+
+        $selectvalue = $data->selectprogram;
+        if (!empty($selectvalue)) {
+            list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
+            $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
+        }
+
+        $selectvalue = $data->selectcohort;
+        if (!empty($selectvalue)) {
+            list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
+            $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
+
+            if (empty($data->selectsubgroup)) {
+                if (empty($data->selectlearnergroup)) {
+                    $synctype = 'cohort';
+                    $syncid = $cohortid;
+                } else {
+                    list($groupid, $grouptitle) = explode(':', $data->selectlearnergroup, 2);
+                    $synctype = 'learnerGroup';
+                    $syncid = $groupid;
+                    $syncinfo["learnerGroup"] = array( "id" => $groupid, "title" => $grouptitle );
+                }
             } else {
+                list($groupid, $grouptitle) = explode(':', $data->selectsubgroup, 2);
                 $synctype = 'learnerGroup';
-                $syncid = $data->selectlearnergroup;
-                $syncinfo["cohort"] = array( "id" => $data->selectcohort );
-                $syncinfo["learnerGroup"] = array( "id" => $data->selectlearnergroup );
+                $syncid = $groupid;
+                $syncinfo["learnerGroup"] = array( "id" => $groupid, "title" => $grouptitle );
             }
-        } else {
-            $synctype = 'learnerGroup';
-            $syncid = $data->selectsubgroup;
-            $syncinfo["cohort"] = array( "id" => $data->selectcohort );
-            $syncinfo["learnerGroup"] = array( "id" => $data->selectsubgroup );
         }
 
         $enrol->add_instance($course, array('name'=>$data->name, 'status'=>$data->status,

@@ -74,21 +74,32 @@ class enrol_ilios_plugin extends enrol_plugin {
             $syncfield = $instance->customchar1;
             $syncid = $instance->customint1;
 
-            $groups = $this->iliosclient->getbyids($syncfield.'s', $syncid);
+            // $groups = $this->iliosclient->getbyids($syncfield.'s', $syncid);
 
-            if (!empty($groups)) {
-                $group = $groups[0];
-                $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
-            } else {
-                $groupname = empty($instance->customchar2) ? get_string('pluginshortname', 'enrol_'.$enrol) : $instance->customchar2;
+            // if (!empty($groups)) {
+            //     $group = $groups[0];
+            //     $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
+            // } else
+            {
+                $syncinfo = json_decode($instance->customtext1);
+                if (!empty($syncinfo)) {
+                    $schooltitle = $syncinfo->school->title;
+                    $programtitle = $syncinfo->program->shorttitle;
+                    $cohorttitle = $syncinfo->cohort->title;
+                    $groupname = $schooltitle ."/".$programtitle."/".$cohorttitle;
+                    if (isset($syncinfo->learnerGroup)) {
+                        $grouptitle = $syncinfo->learnerGroup->title;
+                        $groupname .= '/'.$grouptitle;
+                    }
+                } else {
+                    $groupname = empty($instance->customchar2) ? get_string('pluginshortname', 'enrol_'.$enrol) : $instance->customchar2;
+                }
             }
 
             if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
-                // return get_string('pluginshortname', 'enrol_'.$enrol) . ' (' . $groupname . ' - ' . $role .')';
                 return $groupname . ' (' . $role .')';
             } else {
-                // return get_string('pluginshortname', 'enrol_'.$enrol) . ' (' . $groupname . ')';
                 return $groupname;
             }
 

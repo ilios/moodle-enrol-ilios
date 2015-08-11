@@ -33,11 +33,11 @@ class enrol_ilios_edit_form extends moodleform {
         global $CFG, $DB, $PAGE;
 
         $mform  = $this->_form;
-        $PAGE->requires->yui_module('moodle-enrol_ilios-groupchoosers', 'M.enrol_ilios.init_groupchoosers',
-                array(array('formid' => $mform->getAttribute('id'))));
-
         list($instance, $plugin, $course) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
+
+        $PAGE->requires->yui_module('moodle-enrol_ilios-groupchoosers', 'M.enrol_ilios.init_groupchoosers',
+                                    array(array('formid' => $mform->getAttribute('id'), 'courseid' => $course->id)));
 
         $enrol = $plugin;
         $http  = $plugin->get_http_client();
@@ -123,6 +123,7 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $mform->addElement('select', 'selectschool', get_string('school', 'enrol_ilios'), $schooloptions);
             $mform->addRule('selectschool', get_string('required'), 'required', null, 'client');
+            $mform->addHelpButton('selectschool', 'school', 'enrol_ilios');
             $mform->registerNoSubmitButton('updateschooloptions');
             $mform->addElement('submit', 'updateschooloptions', get_string('schooloptionsupdate', 'enrol_ilios'));
         }
@@ -149,6 +150,7 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohortoptions);
             $mform->addRule('selectcohort', get_string('required'), 'required', null, 'client');
+            $mform->addHelpButton('selectcohort', 'cohort', 'enrol_ilios');
             $mform->disabledIf('selectcohort', 'selectprogram', 'eq', '');
             $mform->registerNoSubmitButton('updatecohortoptions');
             $mform->addElement('submit', 'updatecohortoptions', get_string('cohortoptionsupdate', 'enrol_ilios'));
@@ -161,6 +163,7 @@ class enrol_ilios_edit_form extends moodleform {
 
         } else {
             $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroupoptions);
+            $mform->addHelpButton('selectlearnergroup', 'learnergroup', 'enrol_ilios');
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
             $mform->registerNoSubmitButton('updatelearnergroupoptions');
             $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
@@ -173,6 +176,7 @@ class enrol_ilios_edit_form extends moodleform {
 
         } else {
             $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroupoptions);
+            $mform->addHelpButton('selectsubgroup', 'subgroup', 'enrol_ilios');
             $mform->disabledIf('selectsubgroup', 'selectlearnergroup', 'eq', '');
         }
 
@@ -247,7 +251,7 @@ class enrol_ilios_edit_form extends moodleform {
                     = array( '', '', '');
         }
 
-        $selectcohortindex = $mform->getElementValue('selectcohort');
+        $selectvalues = $mform->getElementValue('selectcohort');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0],':'))
                 list($cohortid, $cohorttitle) = explode(':', $selectvalues[0], 2);
@@ -258,7 +262,7 @@ class enrol_ilios_edit_form extends moodleform {
             $cohorttitle = '';
         }
 
-        $selectlearnergroupindex = $mform->getElementValue('selectlearnergroup');
+        $selectvalues = $mform->getElementValue('selectlearnergroup');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0],':'))
                 list($learnergroupid, $learnergrouptitle) = explode(':', $selectvalues[0], 2);
@@ -322,7 +326,8 @@ class enrol_ilios_edit_form extends moodleform {
 
                 foreach ($cohorts as $cohort) {
                     $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
-                                                .' ('.count($cohort->learnerGroups).')' ;
+                                                                 .' ('.count($cohort->learnerGroups).')'
+                                                                 .' ('.count($cohort->users).')';
                 }
                 $prog_el->load($cohortoptions);
             }
@@ -360,7 +365,7 @@ class enrol_ilios_edit_form extends moodleform {
                                                                    ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
                     $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
-                        $subgrps = $http->get('learnerGroup',
+                        $subgrps = $http->get('learnerGroups',
                                               array( 'parent' => $parent->id),
                                               array( 'title' => "ASC"));
                         foreach ($subgrps as $subgrp) {
