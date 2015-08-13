@@ -86,9 +86,13 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $schooltitle = $syncinfo->school->title;
                     $programtitle = $syncinfo->program->shorttitle;
                     $cohorttitle = $syncinfo->cohort->title;
-                    $groupname = $schooltitle ."/".$programtitle."/".$cohorttitle;
+                    $groupname = get_string('pluginshortname', 'enrol_'.$enrol) . ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
                     if (isset($syncinfo->learnerGroup)) {
                         $grouptitle = $syncinfo->learnerGroup->title;
+                        $groupname .= '/'.$grouptitle;
+                    }
+                    if (isset($syncinfo->subGroup)) {
+                        $grouptitle = $syncinfo->subGroup->title;
                         $groupname .= '/'.$grouptitle;
                     }
                 } else {

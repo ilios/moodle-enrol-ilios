@@ -81,7 +81,9 @@ class enrol_ilios_edit_form extends moodleform {
             $cohortoptions = array( $instance->selectcohortindex => $cohort->title );
 
             $instance->learnergroupid = '';
+            $instance->selectlearnergroupindex = '';
             $instance->subgroupid = '';
+            $instance->selectsubgroupindex = '';
 
             if ($synctype == 'learnerGroup') {
                 $instance->learnergroupid = $syncinfo->learnerGroup->id;
@@ -101,7 +103,8 @@ class enrol_ilios_edit_form extends moodleform {
                         if (is_array($parentgroups)) {
                             $parentgroup = $parentgroups[0];
                             $instance->learnergroupid = $parentgroup->id;
-                            $learnergroupoptions = array( "$instance->learnergroupid" => $parentgroup->title);
+                            $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
+                            $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
                             if (!empty($parentgroup->parent)){
                                 $grouptitle = $parentgroup->title . ' / '. $grouptitle;
                                 $processparents($parentgroup);
