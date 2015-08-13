@@ -65,8 +65,6 @@ $outcome->error = '';
 
 $enrol = enrol_get_plugin('ilios');
 
-$ilioshttpclient = $enrol->get_http_client();
-
 switch ($action) {
     case 'getassignable':
         $otheruserroles = optional_param('otherusers', false, PARAM_BOOL);
@@ -86,7 +84,8 @@ switch ($action) {
         break;
     case 'getselectschooloptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $schools = $ilioshttpclient->get('schools', '', array('title' => "ASC"));
+        $http = $enrol->get_http_client();
+        $schools = $http->get('schools', '', array('title' => "ASC"));
         $schoolarray = array();
         foreach ($schools as $school) {
             $schoolarray["$school->id:$school->title"] = $school->title;
@@ -96,7 +95,8 @@ switch ($action) {
     case 'getselectprogramoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $sid      = required_param('filterid', PARAM_INT); // school id
-        $programs = $ilioshttpclient->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
+        $http = $enrol->get_http_client();
+        $programs = $http->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
             $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;
@@ -106,7 +106,8 @@ switch ($action) {
     case 'getselectcohortoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $pid    = required_param('filterid', PARAM_INT);
-        $programyears = $ilioshttpclient->get('programYears',
+        $http = $enrol->get_http_client();
+        $programyears = $http->get('programYears',
                                               array("program" => $pid, "deleted" => false),
                                               array("startYear" => "ASC"));
         $programyeararray = array();
@@ -116,10 +117,9 @@ switch ($action) {
         }
 
         if (!empty($programyeararray)) {
-            $cohorts = $ilioshttpclient->get('cohorts',
-                                             array("programYear" => $programyeararray),
-                                             array("title" => "ASC"));
-
+            $cohorts = $http->get('cohorts',
+                                  array("programYear" => $programyeararray),
+                                  array("title" => "ASC"));
             foreach ($cohorts as $cohort) {
                 $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
                                                              .' ('.count($cohort->learnerGroups).')'
@@ -132,7 +132,8 @@ switch ($action) {
     case 'getselectlearnergroupoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $cid      = required_param('filterid', PARAM_INT); // school id
-        $learnergroups = $ilioshttpclient->get('learnerGroups',
+        $http = $enrol->get_http_client();
+        $learnergroups = $http->get('learnerGroups',
                                                array('cohort' => $cid, 'parent' => 'null'),
                                                array('title'=> "ASC"));
         $grouparray = array();
@@ -148,8 +149,8 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $gid      = required_param('filterid', PARAM_INT); // group id
         $subgroupoptions = array();
-
-        $subgroups = $ilioshttpclient->get('learnerGroups',
+        $http = $enrol->get_http_client();
+        $subgroups = $http->get('learnerGroups',
                                            array("parent" => $gid),
                                            array("title" => "ASC"));
         foreach ($subgroups as $subgroup) {
@@ -157,8 +158,8 @@ switch ($action) {
                                                                ' ('. count($subgroup->children) .')'.
                                                                ' ('. count($subgroup->users) .')';
             if (!empty($subgroup->children)) {
-                $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$ilioshttpclient) {
-                    $subgrps = $ilioshttpclient->get('learnerGroups',
+                $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
+                    $subgrps = $http->get('learnerGroups',
                                                      array( 'parent' => $parent->id),
                                                      array( 'title' => "ASC"));
                     foreach ($subgrps as $subgrp) {
