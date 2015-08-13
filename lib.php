@@ -18,7 +18,7 @@
  * Ilios enrolment plugin.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
+ * @copyright 2015 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -422,7 +422,7 @@ function enrol_ilios_allow_group_member_remove($itemid, $groupid, $userid) {
  * Ilios API 1.0 Client for using JWT access tokens.
  *
  * @package   enrol_ilios
- * @copyright Carson Tam <carson.tam@ucsf.edu>
+ * @copyright 2015 The Regents of the University of California
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class ilios_client extends curl {
