@@ -189,7 +189,7 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         require_once("$CFG->dirroot/enrol/ilios/locallib.php");
         if ($trace === null) {
-            $trace = new null_progress_trace();
+            $trace = new text_progress_trace();
         }
         enrol_ilios_sync($trace);
         $trace->finished();
