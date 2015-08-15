@@ -135,24 +135,10 @@ class enrol_ilios_plugin extends enrol_plugin {
     protected function can_add_new_instances($courseid) {
         global $DB;
 
-        // TODO: Should our capabilities depends on moodle/cohort:view? Probably not, right?!
         $coursecontext = context_course::instance($courseid);
         if (!has_capability('moodle/course:enrolconfig', $coursecontext) or !has_capability('enrol/ilios:config', $coursecontext)) {
             return false;
         }
-        // list($sqlparents, $params) = $DB->get_in_or_equal($coursecontext->get_parent_context_ids());
-        // $sql = "SELECT id, contextid
-        //           FROM {cohort}
-        //          WHERE contextid $sqlparents
-        //       ORDER BY name ASC";
-        // $cohorts = $DB->get_records_sql($sql, $params);
-        // foreach ($cohorts as $c) {
-        //     $context = context::instance_by_id($c->contextid);
-        //     if (has_capability('moodle/cohort:view', $context)) {
-        //         return true;
-        //     }
-        // }
-        // return false;
         return true;
     }
 
@@ -195,17 +181,17 @@ class enrol_ilios_plugin extends enrol_plugin {
         $trace->finished();
     }
 
-    /**
-     * Called after updating/inserting course.
-     *
-     * @param bool $inserted true if course just inserted
-     * @param stdClass $course
-     * @param stdClass $data form data
-     * @return void
-     */
-    public function course_updated($inserted, $course, $data) {
-        // It turns out there is no need for cohorts to deal with this hook, see MDL-34870.
-    }
+    // /**
+    //  * Called after updating/inserting course.
+    //  *
+    //  * @param bool $inserted true if course just inserted
+    //  * @param stdClass $course
+    //  * @param stdClass $data form data
+    //  * @return void
+    //  */
+    // public function course_updated($inserted, $course, $data) {
+    //     // It turns out there is no need for cohorts to deal with this hook, see MDL-34870.
+    // }
 
     /**
      * Update instance status
@@ -337,8 +323,9 @@ class enrol_ilios_plugin extends enrol_plugin {
             $data->customint6 = $step->get_mappingid('group', $data->customint6);
         }
 
-        if ($data->roleid and $DB->record_exists('ilios', array('id'=>$data->customint1school))) {
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1school, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
+        // if ($data->roleid and $DB->record_exists('cohort', array('id'=>$data->customint1))) {
+        if ($data->roleid) {
+            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'customchar1'=>$data->customchar1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
             if ($instance) {
                 $instanceid = $instance->id;
             } else {
@@ -352,9 +339,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $trace->finished();
 
         } else if ($this->get_config('unenrolaction') == ENROL_EXT_REMOVED_SUSPENDNOROLES) {
-            $data->customint1school = 0;
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1school, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
-
+            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'customerchar1'=>$data->customchar1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
             if ($instance) {
                 $instanceid = $instance->id;
             } else {

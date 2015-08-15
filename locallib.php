@@ -59,8 +59,6 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
     $unenrolaction = $plugin->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
     $moodleusersyncfield = 'idnumber';
     $iliosusersyncfield = 'ucUid';
-    // $moodleusersyncfield = 'id';
-    // $iliosusersyncfield = 'id';
 
     // Iterate through all not enrolled yet users.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
@@ -79,7 +77,6 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
 
         $groups = $http->get($synctype.'s', array( "id" => $syncid ));
 
-        // TODO: How to handle deleted group/cohort
         if (!empty($groups) && is_array($groups)) {
             $group = $groups[0];
 
@@ -94,7 +91,6 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
                             if (!empty($urec)) {
                                 $iliosusers[$user->id] = array( 'id' => $urec->id,
                                                                 'syncfield' => $urec->$moodleusersyncfield );
-                                $userids[] = $urec->id;
                             }
                         }
                     }
@@ -106,7 +102,7 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
                             $trace->output("skipping: Ilios user ".$user->id." does not have a $iliosusersyncfield field.", 1);
                         }
                     } else {
-                        $userid = $iliosusers[$user->id]['id'];
+                        $userids[] = $userid = $iliosusers[$user->id]['id'];
                         $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
                         if (!empty($ue) && isset($ue->status)) {
