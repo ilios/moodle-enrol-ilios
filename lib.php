@@ -82,12 +82,13 @@ class enrol_ilios_plugin extends enrol_plugin {
             //     $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
             // } else
             {
+                $groupname = get_string('pluginshortname', 'enrol_'.$enrol);
                 $syncinfo = json_decode($instance->customtext1);
                 if (!empty($syncinfo)) {
                     $schooltitle = $syncinfo->school->title;
                     $programtitle = $syncinfo->program->shorttitle;
                     $cohorttitle = $syncinfo->cohort->title;
-                    $groupname = get_string('pluginshortname', 'enrol_'.$enrol) . ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
+                    $groupname .= ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
                     if (isset($syncinfo->learnerGroup)) {
                         $grouptitle = $syncinfo->learnerGroup->title;
                         $groupname .= '/'.$grouptitle;
@@ -96,17 +97,22 @@ class enrol_ilios_plugin extends enrol_plugin {
                         $grouptitle = $syncinfo->subGroup->title;
                         $groupname .= '/'.$grouptitle;
                     }
-                } else {
-                    $groupname = empty($instance->customchar2) ? get_string('pluginshortname', 'enrol_'.$enrol) : $instance->customchar2;
                 }
             }
 
             if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
-                return $groupname . ' (' . $role .')';
-            } else {
-                return $groupname;
+                $groupname .= ' (' . $role;
+
+                $groupid = $instance->customint6;
+                $group = groups_get_group( $groupid, 'name' );
+                if (!empty($group) && isset($group->name)) {
+                    $groupname .= ', ' . $group->name;
+                }
+                $groupname .= ')';
             }
+
+            return $groupname;
 
         } else {
             return format_string($instance->name, true, array('context'=>context_course::instance($instance->courseid)));

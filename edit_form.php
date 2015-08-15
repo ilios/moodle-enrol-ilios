@@ -227,11 +227,6 @@ class enrol_ilios_edit_form extends moodleform {
         $enrol = enrol_get_plugin('ilios');
         $http = $enrol->get_http_client();
 
-        // @TODO: First need to check in instance->id exists.
-        // If it does, no need to fill up Select boxes.
-        // @TODO: Wait a minute...why am I doing this here? Isn't this for 'after_data'
-        // not loading data?!
-        // @TODO: getElementValue could return ''. Check it!
         $selectvalues = $mform->getElementValue('selectschool');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0],':'))

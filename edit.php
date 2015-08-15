@@ -58,13 +58,13 @@ if ($instanceid) {
     }
     navigation_node::override_active_url(new moodle_url('/enrol/instances.php', array('id'=>$course->id)));
     $instance = new stdClass();
-    $instance->id         = null;
-    $instance->courseid   = $course->id;
-    $instance->enrol      = 'ilios';
-    $instance->customchar1 = ''; // cohort / learnerGroup
-    $instance->customint1 = '';  // cohort / leaner group id.
-    $instance->customtext1 = ''; // json string of all useful values
-    $instance->customint6 = 0;  // role id.
+    $instance->id          = null;
+    $instance->courseid    = $course->id;
+    $instance->enrol       = 'ilios';
+    $instance->customchar1 = '';  // cohort / learnerGroup
+    $instance->customint1  = '';  // cohort / leaner group id.
+    $instance->customtext1 = '';  // json string of all useful values
+    $instance->customint6  = 0;   // group id.
 }
 
 // Try and make the manage instances node on the navigation active.
