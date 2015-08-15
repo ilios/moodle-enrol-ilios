@@ -535,13 +535,29 @@ class ilios_client extends curl {
 
 
     /**
+     * Get Ilios json object by ID and return PHP object
+     *
+     * @param string $object API object name (camel case)
+     * @param string or array  $ids   e.g. array(1,2,3)
+     */
+    public function getbyid($object, $id) {
+        if (is_numeric($id)) {
+            $result = $this->getbyids($object, $id);
+
+            if (isset($result[0])) {
+                return $result[0];
+            }
+        }
+        return null;
+    }
+
+    /**
      * Get Ilios json object by IDs and return PHP object
      *
      * @param string $object API object name (camel case)
      * @param string or array  $ids   e.g. array(1,2,3)
      */
     public function getbyids($object, $ids='') {
-
         if (empty($this->accesstoken)) {
             throw new moodle_exception( 'Error' );
         }

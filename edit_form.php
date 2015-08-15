@@ -64,20 +64,17 @@ class enrol_ilios_edit_form extends moodleform {
             $syncinfo = json_decode($instance->customtext1);
 
             $instance->schoolid = $syncinfo->school->id;
-            $schools = $http->get('schools', array('id' => $instance->schoolid));
-            $school = $schools[0];
+            $school = $http->getbyid('schools', $instance->schoolid);
             $instance->selectschoolindex = "$instance->schoolid:$school->title";
             $schooloptions = array( $instance->selectschoolindex => $school->title );
 
             $instance->programid = $syncinfo->program->id;
-            $programs = $http->get('programs', array('id' => $instance->programid));
-            $program = $programs[0];
+            $program = $http->getbyid('programs', $instance->programid);
             $instance->selectprogramindex = "$instance->programid:$program->shortTitle:$program->title";
             $programoptions = array( $instance->selectprogramindex => $program->title );
 
             $instance->cohortid = $syncinfo->cohort->id;
-            $cohorts = $http->get('cohorts', array('id' => $instance->cohortid));
-            $cohort = $cohorts[0];
+            $cohort = $http->getbyid('cohorts', $instance->cohortid);
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
             $cohortoptions = array( $instance->selectcohortindex => $cohort->title );
 
@@ -88,8 +85,7 @@ class enrol_ilios_edit_form extends moodleform {
 
             if ($synctype == 'learnerGroup') {
                 $instance->learnergroupid = $syncinfo->learnerGroup->id;
-                $groups = $http->get('learnerGroups', array('id' => $instance->learnergroupid));
-                $group = $groups[0];
+                $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
                 $learnergroupoptions = array($instance->selectlearnergroupindex => $group->title);
 
@@ -224,6 +220,12 @@ class enrol_ilios_edit_form extends moodleform {
     function definition_after_data() {
         global $DB;
         $mform = $this->_form;
+
+        $prog_el = $mform->getElement('selectschool');
+        if ($prog_el->isFrozen()) {
+            return;
+        }
+
         $enrol = enrol_get_plugin('ilios');
         $http = $enrol->get_http_client();
 
