@@ -21,7 +21,8 @@
  * which will be returned and acted upon by the calling AJAX script.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam
+ * @author     Carson Tam <carson.tam@ucsf.edu>
+ * @copyright  2015 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

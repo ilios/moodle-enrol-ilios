@@ -18,7 +18,8 @@
  * Capabilities for ilios access plugin.
  *
  * @package    enrol_ilios
- * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
+ * @author     Carson Tam <carson.tam@ucsf.edu>
+ * @copyright  2015 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

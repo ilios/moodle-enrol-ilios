@@ -34,8 +34,8 @@
  *     -d log_errors=1 -d error_reporting=E_ALL -d display_errors=0 -d html_errors=0
  *
  * @package    enrol_ilios
- * @author     Carson Tam
- * @copyright  2015 Carson Tam <carson.tam@ucsf.edu>
+ * @author     Carson Tam <carson.tam@ucsf.edu>
+ * @copyright  2015 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
