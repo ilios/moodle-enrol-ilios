@@ -97,7 +97,7 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $sid      = required_param('filterid', PARAM_INT); // school id
         $http = $enrol->get_http_client();
-        $programs = $http->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
+        $programs = $http->get('programs', array('school' => $sid, 'deleted' => false), array('title'=> "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
             $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;

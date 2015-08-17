@@ -297,7 +297,7 @@ class enrol_ilios_edit_form extends moodleform {
             $programoptions = array();
 
             $programs = $http->get('programs',
-                                   array( 'owningSchool' => $sid, 'deleted' => false ),
+                                   array( 'school' => $sid, 'deleted' => false ),
                                    array( 'title'=>"ASC"));
             if (!empty($programs)) {
                 foreach ($programs as $program) {
