@@ -373,7 +373,7 @@ class enrol_ilios_edit_form extends moodleform {
                             $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                           ' ('. count($subgrp->children) .')'.
                                                           ' ('. count($subgrp->users) .')';
-                            if (!empty($grp->children)) {
+                            if (!empty($subgrp->children)) {
                                 $processchildren($subgrp);
                             }
                         }
