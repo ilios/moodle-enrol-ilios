@@ -515,19 +515,26 @@ class ilios_client extends curl {
         do {
             $url .= "?limit=$limit&offset=$offset".$filterstring;
             $results = parent::get($url);
-            $obj = json_decode($results);
+            $obj = $this->parse_result($results);
 
-            if ($obj !== null && isset($obj->$object) && !empty($obj->$object)) {
-                $retobj = array_merge($retobj, $obj->$object);
-                if (count($obj->$object) < $limit) {
-                    $obj = null;
+            if ($obj !== null && isset($obj->$object)) {
+                if (!empty($obj->$object)) {
+                    $retobj = array_merge($retobj, $obj->$object);
+                    if (count($obj->$object) < $limit) {
+                        $obj = null;
+                    } else {
+                        $offset += $limit;
+                    }
                 } else {
-                    $offset += $limit;
+                    $obj = null;
                 }
             } else {
-                $obj = null;
+                if ($obj !== null && isset($obj->code)) {
+                    throw new moodle_exception( 'Error '.$obj->code.': '.$obj->message );
+                } else {
+                    throw new moodle_exception( print_r($obj, true) );
+                }
             }
-
         } while ($obj !== null);
 
         return $retobj;
@@ -599,10 +606,22 @@ class ilios_client extends curl {
         $retobj = array();
         foreach ($filterstrings as $filterstr) {
             $results = parent::get($url.$filterstr);
-            $obj = json_decode($results);
+            $obj = $this->parse_result($results);
 
-            if ($obj !== null && isset($obj->$object) && !empty($obj->$object)) {
-                $retobj = array_merge($retobj, $obj->$object);
+            // if ($obj !== null && isset($obj->$object) && !empty($obj->$object)) {
+            //     $retobj = array_merge($retobj, $obj->$object);
+            // }
+
+            if ($obj !== null && isset($obj->$object)) {
+                if (!empty($obj->$object)) {
+                    $retobj = array_merge($retobj, $obj->$object);
+                }
+            } else {
+                if ($obj !== null && isset($obj->code)) {
+                    throw new moodle_exception( 'Error '.$obj->code.': '.$obj->message);
+                } else {
+                    throw new moodle_exception( print_r($obj, true) );
+                }
             }
         }
         return $retobj;
@@ -618,8 +637,6 @@ class ilios_client extends curl {
             return $this->accesstoken;
         } else {
             $params = array('password' => $this->clientsecret, 'username' => $this->clientid);
-            // echo "$result = parent::post($this->hostname . self::AUTH_URL, $params);";
-            // print_r($params);
             $result = parent::post($this->hostname . self::AUTH_URL, $params);
             $parsed_result = $this->parse_result($result);
             $atoken->token = $parsed_result->jwt;
@@ -629,7 +646,7 @@ class ilios_client extends curl {
     }
 
     /**
-     * A method to parse oauth response to get oauth_token and oauth_token_secret
+     * A method to parse response to get token and token_secret
      * @param string $str
      * @return array
      */
@@ -644,7 +661,7 @@ class ilios_client extends curl {
         }
 
         if (isset($result->errors)) {
-            throw new moodle_exception(print_r($result->errors[0]));
+            throw new moodle_exception(print_r($result->errors[0],true));
         }
 
         return $result;
