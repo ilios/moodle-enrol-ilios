@@ -295,7 +295,7 @@ class enrol_ilios_edit_form extends moodleform {
             $sid = $schoolid;
             $prog_el =& $mform->getElement('selectprogram');
             $programoptions = array();
-
+            $programs = array();
             try {
                 $programs = $http->get(
                     'programs',
