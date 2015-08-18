@@ -97,7 +97,18 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $sid      = required_param('filterid', PARAM_INT); // school id
         $http = $enrol->get_http_client();
-        $programs = $http->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title'=> "ASC"));
+        $programs = array();
+        try {
+            $programs = $http->get('programs', array('owningSchool' => $sid, 'deleted' => false), array('title' => "ASC"));
+        } catch (Exception $e) {
+            // KLUDGE!
+            // try again with changed filter parameter name in case of an error.
+            // this should really only occur if this plugin and the Ilios API are out of sync.
+            // for reference please see:
+            // @link https://github.com/ilios/ilios/issues/922
+            // @todo: remove this hack ASAP. [ST 2015/08/18]
+            $programs = $http->get('programs', array('school' => $sid, 'deleted' => false), array('title' => "ASC"));
+        }
         $programarray = array();
         foreach ($programs as $program) {
             $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;
