@@ -84,7 +84,7 @@ class enrol_ilios_edit_form extends moodleform {
             $instance->selectsubgroupindex = '';
 
             if ($synctype == 'learnerGroup') {
-                $instance->learnergroupid = $syncinfo->learnerGroup->id;
+                $instance->learnergroupid = $syncid;
                 $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
                 $learnergroupoptions = array($instance->selectlearnergroupindex => $group->title);
@@ -96,16 +96,13 @@ class enrol_ilios_edit_form extends moodleform {
                                                              &$grouptitle,
                                                              &$instance,
                                                              $http) {
-                        $parentgroups = $http->get('learnerGroups', array('id' => $child->parent));
-                        if (is_array($parentgroups)) {
-                            $parentgroup = $parentgroups[0];
-                            $instance->learnergroupid = $parentgroup->id;
-                            $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
-                            $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
-                            if (!empty($parentgroup->parent)){
-                                $grouptitle = $parentgroup->title . ' / '. $grouptitle;
-                                $processparents($parentgroup);
-                            }
+                        $parentgroup = $http->getbyid('learnerGroups', $child->parent);
+                        $instance->learnergroupid = $parentgroup->id;
+                        $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
+                        $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
+                        if (!empty($parentgroup->parent)){
+                            $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                            $processparents($parentgroup);
                         }
                     };
                     $processparents($group);
