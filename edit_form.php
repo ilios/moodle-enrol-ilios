@@ -87,10 +87,12 @@ class enrol_ilios_edit_form extends moodleform {
                 $instance->learnergroupid = $syncid;
                 $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
-                $learnergroupoptions = array($instance->selectlearnergroupindex => $group->title);
+                $grouptitle = $group->title.
+                            ' ('. count($group->children) .')'.
+                            ' ('. count($group->users) .')';
+                $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
 
                 if (!empty($group->parent)) {
-                    $grouptitle = $group->title;
                     $processparents = function ($child) use (&$processparents,
                                                              &$learnergroupoptions,
                                                              &$grouptitle,
@@ -107,7 +109,7 @@ class enrol_ilios_edit_form extends moodleform {
                     };
                     $processparents($group);
                     $instance->subgroupid = $group->id;
-                    $instance->selectsubgroupindex = "$group->id:$grouptitle";
+                    $instance->selectsubgroupindex = "$group->id:$group->title";
                     $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
                 }
             }

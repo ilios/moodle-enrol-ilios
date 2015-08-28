@@ -110,6 +110,12 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $groupname .= ', ' . $group->name;
                 }
                 $groupname .= ')';
+            } else {
+                $groupid = $instance->customint6;
+                $group = groups_get_group( $groupid, 'name' );
+                if (!empty($group) && isset($group->name)) {
+                    $groupname .= ' (' . $group->name. ')';
+                }
             }
 
             return $groupname;
