@@ -80,6 +80,46 @@ if ($mform->is_cancelled()) {
 
 } else if ($data = $mform->get_data()) {
     // We are here only because the form is submitted.
+    $synctype = '';
+    $syncid = '';
+    $syncinfo = array();
+
+    $selectvalue = isset($data->selectschool) ? $data->selectschool : '';
+    if (!empty($selectvalue)) {
+        list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
+        $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
+    }
+
+    $selectvalue = isset($data->selectprogram) ? $data->selectprogram : '';
+    if (!empty($selectvalue)) {
+        list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
+        $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
+    }
+
+    $selectvalue = isset($data->selectcohort) ? $data->selectcohort : '';
+    if (!empty($selectvalue)) {
+        list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
+        $synctype = 'cohort';
+        $syncid = $cohortid;
+        $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
+    }
+
+    $selectvalue = isset($data->selectlearnergroup) ? $data->selectlearnergroup : '';
+    if (!empty($selectvalue)) {
+        list($learnergroupid, $learnergrouptitle) = explode( ":", $selectvalue, 2);
+        $synctype = 'learnerGroup';
+        $syncid = $learnergroupid;
+        $syncinfo["learnerGroup"] = array( "id" => $learnergroupid, "title" => $learnergrouptitle );
+    }
+
+    $selectvalue = isset($data->selectsubgroup) ? $data->selectsubgroup : '';
+    if (!empty($selectvalue)) {
+        list($subgroupid, $subgrouptitle) = explode( ":", $selectvalue, 2);
+        $synctype = 'learnerGroup';
+        $syncid = $subgroupid;
+        $syncinfo["subGroup"] = array( "id" => $subgroupid, "title" => $subgrouptitle );
+    }
+
     if ($data->id) {
         // NOTE: no cohort or learner group changes here!!!
         if ($data->roleid != $instance->roleid) {
@@ -89,43 +129,6 @@ if ($mform->is_cancelled()) {
         $instance->name         = $data->name;
         $instance->status       = $data->status;
         $instance->roleid       = $data->roleid;
-
-        $selectvalue = $data->selectschool;
-        if (!empty($selectvalue)) {
-            list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
-            $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
-        }
-
-        $selectvalue = $data->selectprogram;
-        if (!empty($selectvalue)) {
-            list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
-            $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
-        }
-
-        $selectvalue = $data->selectcohort;
-        if (!empty($selectvalue)) {
-            list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'cohort';
-            $syncid = $cohortid;
-            $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
-        }
-
-        $selectvalue = $data->selectlearnergroup;
-        if (!empty($selectvalue)) {
-            list($learnergroupid, $learnergrouptitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'learnerGroup';
-            $syncid = $learnergroupid;
-            $syncinfo["learnerGroup"] = array( "id" => $learnergroupid, "title" => $learnergrouptitle );
-        }
-
-        $selectvalue = $data->selectsubgroup;
-        if (!empty($selectvalue)) {
-            list($subgroupid, $subgrouptitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'learnerGroup';
-            $syncid = $subgroupid;
-            $syncinfo["subGroup"] = array( "id" => $subgroupid, "title" => $subgrouptitle );
-        }
-
         $instance->customchar1  = $synctype;
         $instance->customint1   = $syncid;
         $instance->customtext1  = json_encode($syncinfo);
@@ -133,45 +136,7 @@ if ($mform->is_cancelled()) {
         $instance->timemodified = time();
 
         $DB->update_record('enrol', $instance);
-
-    }  else {
-
-        $selectvalue = $data->selectschool;
-        if (!empty($selectvalue)) {
-            list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
-            $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
-        }
-
-        $selectvalue = $data->selectprogram;
-        if (!empty($selectvalue)) {
-            list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
-            $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
-        }
-
-        $selectvalue = $data->selectcohort;
-        if (!empty($selectvalue)) {
-            list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'cohort';
-            $syncid = $cohortid;
-            $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
-        }
-
-        $selectvalue = $data->selectlearnergroup;
-        if (!empty($selectvalue)) {
-            list($learnergroupid, $learnergrouptitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'learnerGroup';
-            $syncid = $learnergroupid;
-            $syncinfo["learnerGroup"] = array("id" => $learnergroupid, "title" => $learnergrouptitle);
-        }
-
-        $selectvalue = $data->selectsubgroup;
-        if (!empty($selectvalue)) {
-            list($subgroupid, $subgrouptitle) = explode( ":", $selectvalue, 2);
-            $synctype = 'learnerGroup';
-            $syncid = $subgroupid;
-            $syncinfo["subGroup"] = array("id" => $subgroupid, "title" => $subgrouptitle);
-        }
-
+    } else {
         $enrol->add_instance($course, array('name'=>$data->name, 'status'=>$data->status,
                                             'customchar1'=>$synctype,
                                             'customint1'=>$syncid,
@@ -179,6 +144,7 @@ if ($mform->is_cancelled()) {
                                             'roleid'=>$data->roleid,
                                             'customint6'=>$data->customint6));
     }
+
     $trace = new null_progress_trace();
     enrol_ilios_sync($trace, $course->id);
     $trace->finished();
