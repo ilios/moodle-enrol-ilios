@@ -190,7 +190,11 @@ class enrol_ilios_plugin extends enrol_plugin {
         if ($trace === null) {
             $trace = new text_progress_trace();
         }
-        enrol_ilios_sync($trace);
+        try {
+            enrol_ilios_sync($trace);
+        } catch (Exception $e) {
+            $trace->output("Ilios Sync cron failed: ".$e->getMessage(), 1);
+        }
         $trace->finished();
     }
 
