@@ -40,10 +40,27 @@ class enrol_ilios_plugin extends enrol_plugin {
      * Constructor
      */
     public function __construct() {
+        $accesstoken = new stdClass;
+        $accesstoken->token = $this->get_config('apikey');
+        $accesstoken->expires = $this->get_config('apikeyexpires');
+
         $this->iliosclient = new ilios_client($this->get_config('host_url'),
                                               $this->get_config('userid'),
                                               $this->get_config('secret'),
-                                              $this->get_config('apikey'));
+                                              $accesstoken);
+    }
+
+    /**
+     * Destructor
+     */
+    public function __destruct() {
+        $accesstoken = $this->iliosclient->getAccessToken();
+        $apikey = $this->get_config('apikey');
+
+        if ($apikey !== $accesstoken->token) {
+            $this->set_config('apikey', $accesstoken->token);
+            //            $this->set_config('apikeyexpiry', $accesstoken->expires);
+        }
     }
 
     /**
@@ -438,36 +455,34 @@ class ilios_client extends curl {
     const AUTH_URL = '/auth/login';
 
     /** var string ilios hostname */
-    private $hostname = '';
+    private $_hostname = '';
     /** var string API base URL */
-    private $apibaseurl = '';
+    private $_apibaseurl = '';
     /** var string The client ID. */
-    private $clientid = '';
+    private $_clientid = '';
     /** var string The client secret. */
-    private $clientsecret = '';
+    private $_clientsecret = '';
     /** var string JWT token */
-    private $accesstoken = null;
+    private $_accesstoken = null;
 
     /**
      * Constructor.
      *
-     * @param string $hostname
-     * @param string $clientid
-     * @param string $clientsecret
+     * @param string   $hostname
+     * @param string   $clientid
+     * @param string   $clientsecret
+     * @param stdClass $accesstoken
      */
-    public function __construct($hostname, $clientid = '', $clientsecret = '', $clienttoken = '') {
+    public function __construct($hostname, $clientid = '', $clientsecret = '', $accesstoken = null) {
         parent::__construct();
-        $this->hostname = $hostname;
-        $this->apibaseurl = $this->hostname . self::API_URL;
-        $this->clientid = $clientid;
-        $this->clientsecret = $clientsecret;
-        if (empty($clienttoken)) {
-            $this->accesstoken = $this->get_new_token();
+        $this->_hostname = $hostname;
+        $this->_apibaseurl = $this->_hostname . self::API_URL;
+        $this->_clientid = $clientid;
+        $this->_clientsecret = $clientsecret;
+        if (empty($accesstoken)) {
+            $this->_accesstoken = $this->get_new_token();
         } else {
-            $atoken = new stdClass;
-            $atoken->token = $clienttoken;
-            $atoken->expires = false;
-            $this->accesstoken = $atoken;
+            $this->_accesstoken = $accesstoken;
         }
     }
 
@@ -482,22 +497,22 @@ class ilios_client extends curl {
      */
     public function get($object, $filters='', $sortorder='') {
 
-        if (empty($this->accesstoken)) {
+        if (empty($this->_accesstoken)) {
             throw new moodle_exception( 'Error: client token is not set.' );
         }
 
-        if ($this->accesstoken->expires && (time() > $this->accesstoken->expires)) {
-            $this->accesstoken = $this->get_new_token();
+        if ($this->_accesstoken->expires && (time() > $this->_accesstoken->expires)) {
+            $this->_accesstoken = $this->get_new_token();
 
-            if (empty($this->accesstoken)) {
+            if (empty($this->_accesstoken)) {
                 throw new moodle_exception( 'Error: unable to renew access token.' );
             }
         }
 
-        $token = $this->accesstoken->token;
+        $token = $this->_accesstoken->token;
         $this->resetHeader();
         $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
-        $url = $this->apibaseurl . '/' . strtolower($object);
+        $url = $this->_apibaseurl . '/' . strtolower($object);
         $filterstring = '';
         if (is_array($filters)) {
             foreach ($filters as $param => $value) {
@@ -575,22 +590,22 @@ class ilios_client extends curl {
      * @param string or array  $ids   e.g. array(1,2,3)
      */
     public function getbyids($object, $ids='') {
-        if (empty($this->accesstoken)) {
+        if (empty($this->_accesstoken)) {
             throw new moodle_exception( 'Error' );
         }
 
-        if ($this->accesstoken->expires && (time() > $this->accesstoken->expires)) {
-            $this->accesstoken = $this->get_new_token();
+        if ($this->_accesstoken->expires && (time() > $this->_accesstoken->expires)) {
+            $this->_accesstoken = $this->get_new_token();
 
-            if (empty($this->accesstoken)) {
+            if (empty($this->_accesstoken)) {
                 throw new moodle_exception( 'Error' );
             }
         }
 
-        $token = $this->accesstoken->token;
+        $token = $this->_accesstoken->token;
         $this->resetHeader();
         $this->setHeader( 'X-JWT-Authorization: Token ' . $token );
-        $url = $this->apibaseurl . '/' . strtolower($object);
+        $url = $this->_apibaseurl . '/' . strtolower($object);
 
         $filterstrings = array();
         if (is_numeric($ids)) {
@@ -643,11 +658,11 @@ class ilios_client extends curl {
     protected function get_new_token() {
         $atoken = new stdClass;
 
-        if (empty($this->clientid) || empty($this->clientsecret)) {
-            return $this->accesstoken;
+        if (empty($this->_clientid) || empty($this->_clientsecret)) {
+            return $this->_accesstoken;
         } else {
-            $params = array('password' => $this->clientsecret, 'username' => $this->clientid);
-            $result = parent::post($this->hostname . self::AUTH_URL, $params);
+            $params = array('password' => $this->_clientsecret, 'username' => $this->_clientid);
+            $result = parent::post($this->_hostname . self::AUTH_URL, $params);
             $parsed_result = $this->parse_result($result);
             $atoken->token = $parsed_result->jwt;
             $atoken->expires = (time() + 3600);  // make it expires in an hour
@@ -660,7 +675,7 @@ class ilios_client extends curl {
      * @param string $str
      * @return array
      */
-    public function parse_result($str) {
+    protected function parse_result($str) {
         if (empty($str)) {
             throw new moodle_exception('error');
         }
@@ -677,4 +692,11 @@ class ilios_client extends curl {
         return $result;
     }
 
+    /**
+     * A method that returns the current access token
+     * @return stdClass $accesstoken
+     */
+    public function getAccessToken() {
+        return $this->_accesstoken;
+    }
 }
