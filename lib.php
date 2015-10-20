@@ -57,9 +57,9 @@ class enrol_ilios_plugin extends enrol_plugin {
         $accesstoken = $this->iliosclient->getAccessToken();
         $apikey = $this->get_config('apikey');
 
-        if ($apikey !== $accesstoken->token) {
+        if (!empty($accesstoken) && ($apikey !== $accesstoken->token)) {
             $this->set_config('apikey', $accesstoken->token);
-            //            $this->set_config('apikeyexpiry', $accesstoken->expires);
+            $this->set_config('apikeyexpires', $accesstoken->expires);
         }
     }
 
@@ -452,7 +452,9 @@ function enrol_ilios_allow_group_member_remove($itemid, $groupid, $userid) {
 class ilios_client extends curl {
     /** @const API URL */
     const API_URL = '/api/v1';
-    const AUTH_URL = '/auth/login';
+    const AUTH_URL = '/auth';
+    const TOKEN_REFRESH_RATE = 86400;  // 24 * 60 * 60 = 24 hours
+    const TOKEN_TTL = 'P7D';           // 7 days
 
     /** var string ilios hostname */
     private $_hostname = '';
@@ -479,6 +481,7 @@ class ilios_client extends curl {
         $this->_apibaseurl = $this->_hostname . self::API_URL;
         $this->_clientid = $clientid;
         $this->_clientsecret = $clientsecret;
+
         if (empty($accesstoken)) {
             $this->_accesstoken = $this->get_new_token();
         } else {
@@ -501,7 +504,7 @@ class ilios_client extends curl {
             throw new moodle_exception( 'Error: client token is not set.' );
         }
 
-        if ($this->_accesstoken->expires && (time() > $this->_accesstoken->expires)) {
+        if (empty($this->_accesstoken->expires) || (time() > $this->_accesstoken->expires)) {
             $this->_accesstoken = $this->get_new_token();
 
             if (empty($this->_accesstoken)) {
@@ -594,7 +597,7 @@ class ilios_client extends curl {
             throw new moodle_exception( 'Error' );
         }
 
-        if ($this->_accesstoken->expires && (time() > $this->_accesstoken->expires)) {
+        if (empty($this->_accesstoken->expires) || (time() > $this->_accesstoken->expires)) {
             $this->_accesstoken = $this->get_new_token();
 
             if (empty($this->_accesstoken)) {
@@ -656,16 +659,40 @@ class ilios_client extends curl {
      * Get new token
      */
     protected function get_new_token() {
-        $atoken = new stdClass;
+        $atoken = null;
 
-        if (empty($this->_clientid) || empty($this->_clientsecret)) {
+        // Try refresh the current token first if it is set
+        if (!empty($this->_accesstoken) && !empty($this->_accesstoken->token)) {
+            $this->resetHeader();
+            $this->setHeader( 'X-JWT-Authorization: Token ' . $this->_accesstoken->token );
+
+            $result = parent::get($this->_hostname.self::AUTH_URL.'/refresh'.'?ttl='.self::TOKEN_TTL);
+            $parsed_result = $this->parse_result($result);
+
+            if (!empty($parsed_result->jwt)) {
+                $atoken = new stdClass;
+                $atoken->token = $parsed_result->jwt;
+                $atoken->expires = time() + self::TOKEN_REFRESH_RATE;
+            }
+        }
+
+        // If token failed to refresh, use clientid and secret
+        if (empty($atoken) && !empty($this->_clientid)) {
+            $params = array('password' => $this->_clientsecret, 'username' => $this->_clientid);
+            $result = parent::post($this->_hostname . self::AUTH_URL . '/login', $params);
+            $parsed_result = $this->parse_result($result);
+
+            if (!empty($parsed_result->jwt)) {
+                $atoken = new stdClass;
+                $atoken->token = $parsed_result->jwt;
+                $atoken->expires = time() + self::TOKEN_REFRESH_RATE;
+            }
+        }
+
+        // If we still could not get a new token, just return the current one (or should we return null?)
+        if (empty($atoken)) {
             return $this->_accesstoken;
         } else {
-            $params = array('password' => $this->_clientsecret, 'username' => $this->_clientid);
-            $result = parent::post($this->_hostname . self::AUTH_URL, $params);
-            $parsed_result = $this->parse_result($result);
-            $atoken->token = $parsed_result->jwt;
-            $atoken->expires = (time() + 3600);  // make it expires in an hour
             return $atoken;
         }
     }
