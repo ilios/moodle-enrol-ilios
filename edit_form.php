@@ -295,25 +295,12 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectprogram');
             $programoptions = array();
             $programs = array();
-            try {
-                $programs = $http->get(
-                    'programs',
-                    array('owningSchool' => $sid, 'deleted' => false),
-                    array('title' => "ASC")
-                );
-            } catch (Exception $e) {
-                // KLUDGE!
-                // try again with changed filter parameter name in case of an error.
-                // this should really only occur if this plugin and the Ilios API are out of sync.
-                // for reference please see:
-                // @link https://github.com/ilios/ilios/issues/922
-                // @todo: remove this hack ASAP. [ST 2015/08/18]
-                $programs = $http->get(
-                    'programs',
-                    array('school' => $sid, 'deleted' => false),
-                    array('title' => "ASC")
-                );
-            }
+            $programs = $http->get(
+                'programs',
+                array('school' => $sid, 'deleted' => false),
+                array('title' => "ASC")
+            );
+
             if (!empty($programs)) {
                 foreach ($programs as $program) {
                     $programoptions["$program->id:$program->shortTitle:$program->title"] = $program->title;
