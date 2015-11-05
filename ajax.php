@@ -98,7 +98,7 @@ switch ($action) {
         $sid      = required_param('filterid', PARAM_INT); // school id
         $http = $enrol->get_http_client();
         $programs = array();
-        $programs = $http->get('programs', array('school' => $sid, 'deleted' => false), array('title' => "ASC"));
+        $programs = $http->get('programs', array('school' => $sid), array('title' => "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
             $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;
@@ -110,7 +110,7 @@ switch ($action) {
         $pid    = required_param('filterid', PARAM_INT);
         $http = $enrol->get_http_client();
         $programyears = $http->get('programYears',
-                                              array("program" => $pid, "deleted" => false),
+                                              array("program" => $pid),
                                               array("startYear" => "ASC"));
         $programyeararray = array();
         $cohortoptions = array();

@@ -282,11 +282,7 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el->load($schooloptions);
         } else {
             foreach ($schools as $school) {
-                if (isset($school->deleted) && $school->deleted) {
-                    $prog_el->addOption( $school->title, "$school->id:$school->title", array('disabled'=> 'true') );
-                } else {
-                    $prog_el->addOption( $school->title, "$school->id:$school->title" );
-                }
+                $prog_el->addOption( $school->title, "$school->id:$school->title" );
             }
         }
 
@@ -297,7 +293,7 @@ class enrol_ilios_edit_form extends moodleform {
             $programs = array();
             $programs = $http->get(
                 'programs',
-                array('school' => $sid, 'deleted' => false),
+                array('school' => $sid),
                 array('title' => "ASC")
             );
 
@@ -315,7 +311,7 @@ class enrol_ilios_edit_form extends moodleform {
             $cohortoptions = array();
 
             $programyears = $http->get('programYears',
-                                       array("program" => $pid, "deleted" => false),
+                                       array("program" => $pid),
                                        array("startYear" => "ASC"));
             $programyeararray = array();
             foreach ($programyears as $progyear) {
