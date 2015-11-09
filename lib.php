@@ -666,13 +666,8 @@ class ilios_client extends curl {
             $this->resetHeader();
             $this->setHeader( 'X-JWT-Authorization: Token ' . $this->_accesstoken->token );
 
-            $result = parent::get($this->_hostname.self::AUTH_URL.'/refresh');
+            $result = parent::get($this->_hostname.self::AUTH_URL.'/token'.'?ttl='.self::TOKEN_TTL);
             $parsed_result = $this->parse_result($result);
-
-            if (empty($parsed_result->jwt)) {       // try again with '/token'.
-                $result = parent::get($this->_hostname.self::AUTH_URL.'/token'.'?ttl='.self::TOKEN_TTL);
-                $parsed_result = $this->parse_result($result);
-            }
 
             if (!empty($parsed_result->jwt)) {
                 $atoken = new stdClass;
