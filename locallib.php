@@ -59,7 +59,7 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
 
     $unenrolaction = $plugin->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
     $moodleusersyncfield = 'idnumber';
-    $iliosusersyncfield = 'ucUid';
+    $iliosusersyncfield = 'campusId';
 
     // Iterate through all not enrolled yet users.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
