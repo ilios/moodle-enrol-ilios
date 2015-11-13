@@ -282,7 +282,7 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el->load($schooloptions);
         } else {
             foreach ($schools as $school) {
-                if ($school->deleted) {
+                if (isset($school->deleted) && $school->deleted) {
                     $prog_el->addOption( $school->title, "$school->id:$school->title", array('disabled'=> 'true') );
                 } else {
                     $prog_el->addOption( $school->title, "$school->id:$school->title" );
