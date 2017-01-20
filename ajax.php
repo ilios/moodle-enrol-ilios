@@ -142,7 +142,9 @@ switch ($action) {
         foreach ($learnergroups as $group) {
             $grouparray["$group->id:$group->title"] = $group->title.
                                                     ' ('. count($group->children) .')'.
-                                                    ' ('. count($group->users) .')';
+                                                    ' ('. count($group->users) .')'.
+                                                    ' (# of Instr: '. count($group->instructors) .')'.
+                                                    ' (Instructor groups: '. count($group->instructorGroups) .')';
         }
         $outcome->response = $grouparray;
         break;
@@ -158,7 +160,9 @@ switch ($action) {
         foreach ($subgroups as $subgroup) {
             $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                ' ('. count($subgroup->children) .')'.
-                                                               ' ('. count($subgroup->users) .')';
+                                                               ' ('. count($subgroup->users) .')'.
+                                                               ' (# of Instructor: '. count($subgroup->instructors) .')'.
+                                                               ' (Instructor groups: '. count($subgroup->instructorGroups) .')';
             if (!empty($subgroup->children)) {
                 $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
                     $subgrps = $http->get('learnerGroups',
@@ -167,7 +171,9 @@ switch ($action) {
                     foreach ($subgrps as $subgrp) {
                         $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                                                         ' ('. count($subgrp->children) .')'.
-                                                                                        ' ('. count($subgrp->users) .')';
+                                                                                        ' ('. count($subgrp->users) .')'.
+                                                                                        ' (# of Instructor: '. count($subgrp->instructors) .')'.
+                                                                                        ' (Instructor groups: '. count($subgrp->instructorGroups) .')';
                         if (!empty($grp->children)) {
                             $processchildren($subgrp);
                         }
@@ -177,6 +183,26 @@ switch ($action) {
             }
         }
         $outcome->response = $subgroupoptions;
+        break;
+
+    case 'getselectinstructorgroupoptions':
+        require_capability('moodle/course:enrolconfig', $context);
+        $gid      = required_param('filterid', PARAM_INT); // group id
+        $instructorgroupoptions = array();
+        $http = $enrol->get_http_client();
+        $learnergroup = $http->getbyid('learnerGroups', $gid);
+        if (!empty($learnergroup->instructorGroups)) {
+            $instructorgroups = $http->get('instructorGroups',
+                                           // array("id" => $learnergroup->instructorGroups),
+                                           '',
+                                           array("title" => "ASC"));
+            foreach ($instructorgroups as $instructorgroup) {
+                $instructorgroupoptions["$instructorgroup->id:$instructorgroup->title"] = $instructorgroup->title.
+                                                                                        ' ('. count($instructorgroup->users) .')';
+            }
+        }
+
+        $outcome->response = $instructorgroupoptions;
         break;
 
     case 'enrolilios':

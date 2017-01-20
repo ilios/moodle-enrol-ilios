@@ -57,6 +57,7 @@ class enrol_ilios_edit_form extends moodleform {
         $cohortoptions = array('' => get_string('choosedots'));
         $learnergroupoptions = array('' => get_string('none'));
         $subgroupoptions = array('' => get_string('none'));
+        $instructorgroupoptions = array('' => get_string('none'));
 
         if ($instance->id) {
             $synctype = $instance->customchar1;
@@ -177,12 +178,22 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->addElement('select', 'selectsubgroup', get_string('subgroup', 'enrol_ilios'), $subgroupoptions);
             $mform->addHelpButton('selectsubgroup', 'subgroup', 'enrol_ilios');
             $mform->disabledIf('selectsubgroup', 'selectlearnergroup', 'eq', '');
+            $mform->registerNoSubmitButton('updatesubgroupoptions');
+            // $mform->addElement('submit', 'updatesubgroupoptions', get_string('subgroupoptionsupdate', 'enrol_ilios'));
+            $mform->addElement('submit', 'updatesubgroupoptions', 'Update subgroup option');
         }
+
+
+        // Role assignment
+        $mform->addElement('header','roleassignment', 'Role assignment');
 
         $roles = get_assignable_roles($coursecontext);
         $roles[0] = get_string('none');
         $roles = array_reverse($roles, true); // Descending default sortorder.
-        $mform->addElement('select', 'roleid', get_string('assignrole', 'enrol_ilios'), $roles);
+
+        // Student roles
+        // $mform->addElement('select', 'roleid', get_string('assignrole', 'enrol_ilios'), $roles);
+        $mform->addElement('select', 'roleid', 'Assign Ilios learners into', $roles);
         $mform->setDefault('roleid', $enrol->get_config('roleid'));
         if ($instance->id and !isset($roles[$instance->roleid])) {
             if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
@@ -193,12 +204,22 @@ class enrol_ilios_edit_form extends moodleform {
             }
         }
 
+        // Instructor role
+        $mform->addElement('select', 'instructorroleid', 'Assign Ilios instructors into', $roles);
+        $mform->setDefault('instructorroleid', $enrol->get_config('roleinstructorid'));
+        $mform->disabledIf('instructorroleid', 'selectlearnergroup', 'eq', '');
+
         $groups = array(0 => get_string('none'));
         foreach (groups_get_all_groups($course->id) as $group) {
             $groups[$group->id] = format_string($group->name, true, array('context'=>$coursecontext));
         }
 
+        // Group assignment
+        $mform->addElement('header','groupassignment', 'Group assignment');
+
         $mform->addElement('select', 'customint6', get_string('addgroup', 'enrol_ilios'), $groups);
+        // $mform->addElement('select', 'customint6', 'Add to group', $groups);
+
 
         $mform->addElement('hidden', 'courseid', null);
         $mform->setType('courseid', PARAM_INT);

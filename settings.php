@@ -38,11 +38,18 @@ if ($ADMIN->fulltree) {
         $settings->add(new admin_setting_configtext('enrol_ilios/apikey', get_string('apikey', 'enrol_ilios'), get_string('apikey_desc', 'enrol_ilios'), ''));
         $settings->add(new admin_setting_configtext('enrol_ilios/userid', get_string('userid', 'enrol_ilios'), get_string('userid_desc', 'enrol_ilios'), ''));
         $settings->add(new admin_setting_configpasswordunmask('enrol_ilios/secret', get_string('secret', 'enrol_ilios'), get_string('secret_desc', 'enrol_ilios'), ''));
+
         $options = get_default_enrol_roles(context_system::instance());
         $student = get_archetype_roles('student');
         $student = reset($student);
         $settings->add(new admin_setting_configselect('enrol_ilios/roleid',
-            get_string('defaultrole', 'role'), '', $student->id, $options));
+            // get_string('defaultrole', 'role'), '', $student->id, $options));
+            'Default student role', '', $student->id, $options));
+
+        $teacher = get_archetype_roles('teacher');
+        $teacher = reset($teacher);
+        $settings->add(new admin_setting_configselect('enrol_ilios/roleinstructorid',
+            'Default instructor role', '', $teacher->id, $options));
 
         $options = array(
             ENROL_EXT_REMOVED_UNENROL        => get_string('extremovedunenrol', 'enrol'),
