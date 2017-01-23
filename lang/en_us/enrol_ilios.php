@@ -19,7 +19,7 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2015 The Regents of the University of California
+ * @copyright  2017 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -31,6 +31,8 @@ $string['assignrole'] = 'Assign role';
 $string['cohort'] = 'Program year/Cohort (groups) (users)';
 $string['cohort_help'] = 'This corresponds to the Cohorts in Ilios.';
 $string['cohortoptionsupdate'] = 'Update cohort options';
+$string['defaultlearnerrole'] = 'Default learner role';
+$string['defaultinstructorrole'] = 'Default instructor role';
 $string['enrol'] = 'Enroll Ilios users';
 $string['enrolilios'] = 'Enroll Ilios cohort/learner group/users';
 $string['enrolilioscohort'] = 'Enroll cohort';

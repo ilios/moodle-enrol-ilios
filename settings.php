@@ -19,7 +19,7 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2015 The Regents of the University of California
+ * @copyright  2017 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -43,13 +43,14 @@ if ($ADMIN->fulltree) {
         $student = get_archetype_roles('student');
         $student = reset($student);
         $settings->add(new admin_setting_configselect('enrol_ilios/roleid',
-            // get_string('defaultrole', 'role'), '', $student->id, $options));
-            'Default student role', '', $student->id, $options));
+                                                      get_string('defaultlearnerrole', 'enrol_ilios'),
+                                                      '', $student->id, $options));
 
         $teacher = get_archetype_roles('teacher');
         $teacher = reset($teacher);
         $settings->add(new admin_setting_configselect('enrol_ilios/roleinstructorid',
-            'Default instructor role', '', $teacher->id, $options));
+                                                      get_string('defaultinstructorrole', 'enrol_ilios'),
+                                                      '', $teacher->id, $options));
 
         $options = array(
             ENROL_EXT_REMOVED_UNENROL        => get_string('extremovedunenrol', 'enrol'),
