@@ -126,11 +126,16 @@ if ($mform->is_cancelled()) {
             // The sync script can only add roles, for perf reasons it does not modify them.
             role_unassign_all(array('contextid'=>$context->id, 'roleid'=>$instance->roleid, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
         }
+        if ($data->instructorroleid != $instance->customint2) {
+            // The sync script can only add roles, for perf reasons it does not modify them.
+            role_unassign_all(array('contextid'=>$context->id, 'roleid'=>$instance->customint2, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
+        }
         $instance->name         = $data->name;
         $instance->status       = $data->status;
         $instance->roleid       = $data->roleid;
         $instance->customchar1  = $synctype;
         $instance->customint1   = $syncid;
+        $instance->customint2   = $data->instructorroleid;
         $instance->customtext1  = json_encode($syncinfo);
         $instance->customint6   = $data->customint6;
         $instance->timemodified = time();
@@ -142,6 +147,7 @@ if ($mform->is_cancelled()) {
                                             'customint1'=>$syncid,
                                             'customtext1'=>json_encode($syncinfo),
                                             'roleid'=>$data->roleid,
+                                            'customint2'=>$data->instructorroleid,
                                             'customint6'=>$data->customint6));
     }
 

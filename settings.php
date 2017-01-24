@@ -46,12 +46,6 @@ if ($ADMIN->fulltree) {
                                                       get_string('defaultlearnerrole', 'enrol_ilios'),
                                                       '', $student->id, $options));
 
-        $teacher = get_archetype_roles('teacher');
-        $teacher = reset($teacher);
-        $settings->add(new admin_setting_configselect('enrol_ilios/roleinstructorid',
-                                                      get_string('defaultinstructorrole', 'enrol_ilios'),
-                                                      '', $teacher->id, $options));
-
         $options = array(
             ENROL_EXT_REMOVED_UNENROL        => get_string('extremovedunenrol', 'enrol'),
             ENROL_EXT_REMOVED_SUSPENDNOROLES => get_string('extremovedsuspendnoroles', 'enrol'));

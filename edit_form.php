@@ -185,29 +185,40 @@ class enrol_ilios_edit_form extends moodleform {
 
 
         // Role assignment
-        $mform->addElement('header','roleassignment', 'Role assignment');
+        $mform->addElement('header','roleassignments', get_string('roleassignments', 'role'));
 
         $roles = get_assignable_roles($coursecontext);
         $roles[0] = get_string('none');
         $roles = array_reverse($roles, true); // Descending default sortorder.
-
-        // Student roles
-        // $mform->addElement('select', 'roleid', get_string('assignrole', 'enrol_ilios'), $roles);
-        $mform->addElement('select', 'roleid', 'Assign Ilios learners into', $roles);
-        $mform->setDefault('roleid', $enrol->get_config('roleid'));
-        if ($instance->id and !isset($roles[$instance->roleid])) {
-            if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
-                $roles = role_fix_names($roles, $coursecontext, ROLENAME_ALIAS, true);
-                $roles[$instance->roleid] = role_get_name($role, $coursecontext);
-            } else {
-                $roles[$instance->roleid] = get_string('error');
+        if ($instance->id) {
+            if (!isset($roles[$instance->roleid])) {
+                if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
+                    $roles = role_fix_names($roles, $coursecontext, ROLENAME_ALIAS, true);
+                    $roles[$instance->roleid] = role_get_name($role, $coursecontext);
+                } else {
+                    $roles[$instance->roleid] = get_string('error');
+                }
+            }
+            if (!isset($roles[$instance->customint2])) {
+                if ($role = $DB->get_record('role', array('id'=>$instance->customint2))) {
+                    $roles = role_fix_names($roles, $coursecontext, ROLENAME_ALIAS, true);
+                    $roles[$instance->customint2] = role_get_name($role, $coursecontext);
+                } else {
+                    $roles[$instance->customint2] = get_string('error');
+                }
             }
         }
 
-        // Instructor role
-        $mform->addElement('select', 'instructorroleid', 'Assign Ilios instructors into', $roles);
-        $mform->setDefault('instructorroleid', $enrol->get_config('roleinstructorid'));
+        // Learner role
+        $mform->addElement('select', 'roleid', get_string('assignlearnerrole', 'enrol_ilios'), $roles);
+        $mform->setDefault('roleid', $enrol->get_config('roleid'));
+        $mform->addHelpButton('roleid', 'assignlearnerrole', 'enrol_ilios');
+
+        // Instructor role (customint2)
+        $mform->addElement('select', 'instructorroleid', get_string('assigninstructorrole', 'enrol_ilios'), $roles);
+        $mform->setDefault('instructorroleid', 0);
         $mform->disabledIf('instructorroleid', 'selectlearnergroup', 'eq', '');
+        $mform->addHelpButton('instructorroleid', 'assigninstructorrole', 'enrol_ilios');
 
         $groups = array(0 => get_string('none'));
         foreach (groups_get_all_groups($course->id) as $group) {
@@ -215,7 +226,7 @@ class enrol_ilios_edit_form extends moodleform {
         }
 
         // Group assignment
-        $mform->addElement('header','groupassignment', 'Group assignment');
+        // $mform->addElement('header','groupassignment', 'Group assignment');
 
         $mform->addElement('select', 'customint6', get_string('addgroup', 'enrol_ilios'), $groups);
         // $mform->addElement('select', 'customint6', 'Add to group', $groups);
