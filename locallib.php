@@ -52,14 +52,12 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
     $trace->output('Starting user enrolment synchronisation...');
 
     $allroles = get_all_roles();
-    $iliosusers = array(); // cache
+    $iliosusers = array(); // cache user data
 
     $plugin = enrol_get_plugin('ilios');
     $http   = $plugin->get_http_client();
 
     $unenrolaction = $plugin->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
-    $moodleusersyncfield = 'idnumber';
-    $iliosusersyncfield = 'campusId';
 
     // Iterate through all not enrolled yet users.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
@@ -76,103 +74,109 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
         $synctype = $instance->customchar1;
         $syncid = $instance->customint1;
 
-        $groups = $http->get($synctype.'s', array( "id" => $syncid ));
+        if (!empty($instance->customint2)) {
+            // Need to get instructor ids.  This function takes longer to run.
+            $group = $http->getGroupData($synctype, $syncid);
+        } else {
+            // No need to get instructor ids.
+            $group = $http->getbyid( $synctype.'s', $syncid);
+        }
 
-        if (!empty($groups) && is_array($groups)) {
-            $group = $groups[0];
+        if (empty($group)) {
+            $trace->output("skipping: Unable to fetch data for Ilios $synctype ID $syncid.", 1);
+            continue;
+        }
 
-            if (!empty($group->users)) {
-                $users = $http->getbyids('users', $group->users);
-                $userids = array();
+        if (!empty($group)) {
+
+            $roles = array();
+
+            if (!empty($group->users) && !empty($instance->roleid)) {
+                $roles[] = array( 'roleid' => $instance->roleid,
+                                  'users'  => $group->users );
+            }
+
+            // We could sync 'cohort' too, but we only care about instructors in 'learnerGroup' right now.
+            if ($synctype === 'learnerGroup' && !empty($group->instructors) && !empty($instance->customint2)) {
+                $roles[] = array( 'roleid' => $instance->customint2,
+                                  'users'  => $group->instructors );
+            }
+
+            $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
+
+            foreach ($roles as $role) {
+                $trace->output("Enrolling Role ID ".$role['roleid']." for Course ID ".$instance->courseid." through Ilios Sync ID ".$instance->id.".");
+
+                $users = $http->getbyids('users', $role['users']);
                 foreach ($users as $user) {
+                    // Fetch user info if not cached in $iliosusers
                     if (!isset($iliosusers[$user->id])) {
                         $iliosusers[$user->id] = null;
-                        if (!empty($user->$iliosusersyncfield)) {
-                            $urec = $DB->get_record('user', array("$moodleusersyncfield" => $user->$iliosusersyncfield));
+                        if (!empty($user->campusId)) {
+                            $urec = $DB->get_record('user', array("idnumber" => $user->campusId));
                             if (!empty($urec)) {
                                 $iliosusers[$user->id] = array( 'id' => $urec->id,
-                                                                'syncfield' => $urec->$moodleusersyncfield );
+                                                                'syncfield' => $urec->idnumber );
                             }
                         }
                     }
 
                     if ($iliosusers[$user->id] === null) {
-                        if (!empty($user->$iliosusersyncfield)) {
-                            $trace->output("skipping: Cannot find $iliosusersyncfield ".$user->$iliosusersyncfield." that matches Moodle user field $moodleusersyncfield.", 1);
+                        if (!empty($user->campusId)) {
+                            $trace->output("skipping: Cannot find campusId ".$user->campusId." that matches Moodle user field 'idnumber'.", 1);
                         } else {
-                            $trace->output("skipping: Ilios user ".$user->id." does not have a $iliosusersyncfield field.", 1);
+                            $trace->output("skipping: Ilios user ".$user->id." does not have a 'campusId' field.", 1);
                         }
                     } else {
-                        $userids[] = $userid = $iliosusers[$user->id]['id'];
+                        $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
+                        $status = ENROL_USER_ACTIVE;
+
                         $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
-                        if (!empty($ue) && isset($ue->status)) {
-                            if ($ue->status == ENROL_USER_SUSPENDED) {
-                                $plugin->update_user_enrol($instance, $userid, ENROL_USER_ACTIVE);
-                                $trace->output("unsuspending: userid $userid ==> courseid ".$instance->courseid." via Ilios $synctype $syncid", 1);
-                            }
+                        // Continue if already enrolled with active status
+                        if (!empty($ue) && $status === (int)$ue->status) {
+                            continue;
+                        }
+
+                        // Enroll user
+                        $plugin->enrol_user($instance, $userid, $role['roleid'], 0, 0, $status);
+                        if ($status !== (int)$ue->status) {
+                            $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
                         } else {
-                            $plugin->enrol_user($instance, $userid);
-                            $trace->output("enrolling: userid $userid ==> courseid ".$instance->courseid." via Ilios $synctype $syncid", 1);
+                            $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
                         }
                     }
                 }
-
-                // Unenrol as necessary.
-                if (!empty($userids)) {
-                    $sql = "SELECT ue.*
+            }
+            // Unenrol as necessary.
+            if (!empty($enrolleduserids)) {
+                $sql = "SELECT ue.*
                               FROM {user_enrolments} ue
                              WHERE ue.enrolid = $instance->id
-                               AND ue.userid NOT IN ( ".implode(",", $userids)." )";
+                               AND ue.userid NOT IN ( ".implode(",", $enrolleduserids)." )";
 
-                    $rs = $DB->get_recordset_sql($sql);
-                    foreach($rs as $ue) {
-                        if ($unenrolaction == ENROL_EXT_REMOVED_UNENROL) {
-                            // Remove enrolment together with group membership, grades, preferences, etc.
-                            $plugin->unenrol_user($instance, $ue->userid);
-                            $trace->output("unenrolling: $ue->userid ==> ".$instance->courseid." via Ilios $synctype $syncid", 1);
-                        } else { // ENROL_EXT_REMOVED_SUSPENDNOROLES
-                            // Just disable and ignore any changes.
-                            if ($ue->status != ENROL_USER_SUSPENDED) {
-                                $plugin->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
-                                $context = context_course::instance($instance->courseid);
-                                role_unassign_all(array('userid'=>$ue->userid, 'contextid'=>$context->id, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
-                                $trace->output("suspending and unsassigning all roles: userid ".$ue->userid." ==> courseid ".$instance->courseid, 1);
-                            }
+                $rs = $DB->get_recordset_sql($sql);
+                foreach($rs as $ue) {
+                    if ($unenrolaction == ENROL_EXT_REMOVED_UNENROL) {
+                        // Remove enrolment together with group membership, grades, preferences, etc.
+                        $plugin->unenrol_user($instance, $ue->userid);
+                        $trace->output("unenrolling: $ue->userid ==> ".$instance->courseid." via Ilios $synctype $syncid", 1);
+                    } else { // ENROL_EXT_REMOVED_SUSPENDNOROLES
+                        // Just disable and ignore any changes.
+                        if ($ue->status != ENROL_USER_SUSPENDED) {
+                            $plugin->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
+                            $context = context_course::instance($instance->courseid);
+                            role_unassign_all(array('userid'=>$ue->userid, 'contextid'=>$context->id, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
+                            $trace->output("suspending and unsassigning all roles: userid ".$ue->userid." ==> courseid ".$instance->courseid, 1);
                         }
                     }
-                    $rs->close();
                 }
+                $rs->close();
             }
         }
     }
     $instances->close();
     unset($iliosusers);
-
-
-    // Now assign all necessary roles to enrolled users - skip suspended instances and users.
-    $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
-    $sql = "SELECT e.roleid, ue.userid, c.id AS contextid, e.id AS itemid, e.courseid
-              FROM {user_enrolments} ue
-              JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = 'ilios' AND e.status = :statusenabled $onecourse)
-              JOIN {role} r ON (r.id = e.roleid)
-              JOIN {context} c ON (c.instanceid = e.courseid AND c.contextlevel = :coursecontext)
-              JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
-         LEFT JOIN {role_assignments} ra ON (ra.contextid = c.id AND ra.userid = ue.userid AND ra.itemid = e.id AND ra.component = 'enrol_ilios' AND e.roleid = ra.roleid)
-             WHERE ue.status = :useractive AND ra.id IS NULL";
-    $params = array();
-    $params['statusenabled'] = ENROL_INSTANCE_ENABLED;
-    $params['useractive'] = ENROL_USER_ACTIVE;
-    $params['coursecontext'] = CONTEXT_COURSE;
-    $params['courseid'] = $courseid;
-
-    $rs = $DB->get_recordset_sql($sql, $params);
-    foreach($rs as $ra) {
-        role_assign($ra->roleid, $ra->userid, $ra->contextid, 'enrol_ilios', $ra->itemid);
-        $trace->output("assigning role: $ra->userid ==> $ra->courseid as ".$allroles[$ra->roleid]->shortname, 1);
-    }
-    $rs->close();
-
 
     // Remove unwanted roles - sync role can not be changed, we only remove role when unenrolled.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
@@ -194,7 +198,6 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
         $trace->output("unassigning role: $ra->userid ==> $ra->courseid as ".$allroles[$ra->roleid]->shortname, 1);
     }
     $rs->close();
-
 
     // Finally sync groups.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";

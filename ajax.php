@@ -142,9 +142,7 @@ switch ($action) {
         foreach ($learnergroups as $group) {
             $grouparray["$group->id:$group->title"] = $group->title.
                                                     ' ('. count($group->children) .')'.
-                                                    ' ('. count($group->users) .')'.
-                                                    ' (# of Instr: '. count($group->instructors) .')'.
-                                                    ' (Instructor groups: '. count($group->instructorGroups) .')';
+                                                    ' ('. count($group->users) .')';
         }
         $outcome->response = $grouparray;
         break;
@@ -160,9 +158,7 @@ switch ($action) {
         foreach ($subgroups as $subgroup) {
             $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                ' ('. count($subgroup->children) .')'.
-                                                               ' ('. count($subgroup->users) .')'.
-                                                               ' (# of Instructor: '. count($subgroup->instructors) .')'.
-                                                               ' (Instructor groups: '. count($subgroup->instructorGroups) .')';
+                                                               ' ('. count($subgroup->users) .')';
             if (!empty($subgroup->children)) {
                 $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
                     $subgrps = $http->get('learnerGroups',
@@ -171,9 +167,7 @@ switch ($action) {
                     foreach ($subgrps as $subgrp) {
                         $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                                                         ' ('. count($subgrp->children) .')'.
-                                                                                        ' ('. count($subgrp->users) .')'.
-                                                                                        ' (# of Instructor: '. count($subgrp->instructors) .')'.
-                                                                                        ' (Instructor groups: '. count($subgrp->instructorGroups) .')';
+                                                                                        ' ('. count($subgrp->users) .')';
                         if (!empty($grp->children)) {
                             $processchildren($subgrp);
                         }
