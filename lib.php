@@ -119,11 +119,10 @@ class enrol_ilios_plugin extends enrol_plugin {
 
             if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
-                $groupname .= ' (' . $role;
-
-                if ($instructorrole = $DB->get_record('role', array('id'=>$instance->customint2))) {
-                    $instructorrole = role_get_name($instructorrole, context_course::instance($instance->courseid, IGNORE_MISSING));
-                    $groupname .= '/' . $instructorrole;
+                if (empty($instance->customint2)) {
+                    $groupname .= ' (Learner => '.$role;
+                } else {
+                    $groupname .= ' (Instructor => '.$role;
                 }
 
                 $groupid = $instance->customint6;
@@ -133,21 +132,10 @@ class enrol_ilios_plugin extends enrol_plugin {
                 }
                 $groupname .= ')';
             } else {
-                if ($instructorrole = $DB->get_record('role', array('id'=>$instance->customint2))) {
-                    $instructorrole = role_get_name($instructorrole, context_course::instance($instance->courseid, IGNORE_MISSING));
-                    $groupname .= ' (' . $instructorrole;
-
-                    $groupid = $instance->customint6;
-                    $group = groups_get_group( $groupid, 'name' );
-                    if (!empty($group) && isset($group->name)) {
-                        $groupname .= ', ' . $group->name. ')';
-                    }
-                } else {
-                    $groupid = $instance->customint6;
-                    $group = groups_get_group( $groupid, 'name' );
-                    if (!empty($group) && isset($group->name)) {
-                        $groupname .= ' (' . $group->name. ')';
-                    }
+                $groupid = $instance->customint6;
+                $group = groups_get_group( $groupid, 'name' );
+                if (!empty($group) && isset($group->name)) {
+                    $groupname .= ' (' . $group->name. ')';
                 }
             }
 
@@ -443,7 +431,6 @@ class enrol_ilios_plugin extends enrol_plugin {
         // Nothing to do here, the group members are added in $this->restore_group_restored()
         return;
     }
-
 }
 
 /**

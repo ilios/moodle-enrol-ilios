@@ -89,65 +89,56 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
 
         if (!empty($group)) {
 
-            $roles = array();
-
-            if (!empty($group->users) && !empty($instance->roleid)) {
-                $roles[] = array( 'roleid' => $instance->roleid,
-                                  'users'  => $group->users );
-            }
-
-            // We could sync 'cohort' too, but we only care about instructors in 'learnerGroup' right now.
-            if ($synctype === 'learnerGroup' && !empty($group->instructors) && !empty($instance->customint2)) {
-                $roles[] = array( 'roleid' => $instance->customint2,
-                                  'users'  => $group->instructors );
-            }
-
             $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
 
-            foreach ($roles as $role) {
-                $trace->output("Enrolling Role ID ".$role['roleid']." for Course ID ".$instance->courseid." through Ilios Sync ID ".$instance->id.".");
+            if (!empty($instance->customint2)) {
+                $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
+                $users = $http->getbyids('users', $group->instructors);
+            } else {
+                $trace->output("Enrolling students to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
+                $users = $http->getbyids('users', $group->users);
+            }
 
-                $users = $http->getbyids('users', $role['users']);
-                foreach ($users as $user) {
-                    // Fetch user info if not cached in $iliosusers
-                    if (!isset($iliosusers[$user->id])) {
-                        $iliosusers[$user->id] = null;
-                        if (!empty($user->campusId)) {
-                            $urec = $DB->get_record('user', array("idnumber" => $user->campusId));
-                            if (!empty($urec)) {
-                                $iliosusers[$user->id] = array( 'id' => $urec->id,
-                                                                'syncfield' => $urec->idnumber );
-                            }
-                        }
-                    }
-
-                    if ($iliosusers[$user->id] === null) {
-                        if (!empty($user->campusId)) {
-                            $trace->output("skipping: Cannot find campusId ".$user->campusId." that matches Moodle user field 'idnumber'.", 1);
-                        } else {
-                            $trace->output("skipping: Ilios user ".$user->id." does not have a 'campusId' field.", 1);
-                        }
-                    } else {
-                        $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
-                        $status = ENROL_USER_ACTIVE;
-
-                        $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
-
-                        // Continue if already enrolled with active status
-                        if (!empty($ue) && $status === (int)$ue->status) {
-                            continue;
-                        }
-
-                        // Enroll user
-                        $plugin->enrol_user($instance, $userid, $role['roleid'], 0, 0, $status);
-                        if ($status !== (int)$ue->status) {
-                            $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
-                        } else {
-                            $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
+            foreach ($users as $user) {
+                // Fetch user info if not cached in $iliosusers
+                if (!isset($iliosusers[$user->id])) {
+                    $iliosusers[$user->id] = null;
+                    if (!empty($user->campusId)) {
+                        $urec = $DB->get_record('user', array("idnumber" => $user->campusId));
+                        if (!empty($urec)) {
+                            $iliosusers[$user->id] = array( 'id' => $urec->id,
+                                                            'syncfield' => $urec->idnumber );
                         }
                     }
                 }
+
+                if ($iliosusers[$user->id] === null) {
+                    if (!empty($user->campusId)) {
+                        $trace->output("skipping: Cannot find campusId ".$user->campusId." that matches Moodle user field 'idnumber'.", 1);
+                    } else {
+                        $trace->output("skipping: Ilios user ".$user->id." does not have a 'campusId' field.", 1);
+                    }
+                } else {
+                    $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
+                    $status = ENROL_USER_ACTIVE;
+
+                    $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
+
+                    // Continue if already enrolled with active status
+                    if (!empty($ue) && $status === (int)$ue->status) {
+                        continue;
+                    }
+
+                    // Enroll user
+                    $plugin->enrol_user($instance, $userid, $instance->roleid, 0, 0, $status);
+                    if ($status !== (int)$ue->status) {
+                        $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
+                    } else {
+                        $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
+                    }
+                }
             }
+
             // Unenrol as necessary.
             if (!empty($enrolleduserids)) {
                 $sql = "SELECT ue.*
@@ -255,7 +246,7 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
  * @return int
  */
 
-// TOOD: This is being called by ajax.php.  Update this to take learner group id
+// DISABLED: This is being called by ajax.php.  // TODO: Update this to take learner group id
 function enrol_ilios_enrol_all_users(course_enrolment_manager $manager, $cohortid, $roleid) {
     global $DB;
     $context = $manager->get_context();
@@ -291,47 +282,6 @@ function enrol_ilios_enrol_all_users(course_enrolment_manager $manager, $cohorti
     $rs->close();
     return $count;
 }
-
-// DELETE: Not being called anywhere
-// /**
-//  * Gets all the cohorts the user is able to view.
-//  *
-//  * @global moodle_database $DB
-//  * @param course_enrolment_manager $manager
-//  * @return array
-//  */
-// function enrol_ilios_get_cohorts(course_enrolment_manager $manager) {
-//     global $DB;
-//     $context = $manager->get_context();
-//     $cohorts = array();
-//     $instances = $manager->get_enrolment_instances();
-//     $enrolled = array();
-//     foreach ($instances as $instance) {
-//         if ($instance->enrol == 'ilios') {
-//             $enrolled[] = $instance->customint1;
-//         }
-//     }
-//     list($sqlparents, $params) = $DB->get_in_or_equal($context->get_parent_context_ids());
-//     $sql = "SELECT id, name, idnumber, contextid
-//               FROM {cohort}
-//              WHERE contextid $sqlparents
-//           ORDER BY name ASC, idnumber ASC";
-//     $rs = $DB->get_recordset_sql($sql, $params);
-//     foreach ($rs as $c) {
-//         $context = context::instance_by_id($c->contextid);
-//         if (!has_capability('moodle/cohort:view', $context)) {
-//             continue;
-//         }
-//         $cohorts[$c->id] = array(
-//             'cohortid'=>$c->id,
-//             'name'=>format_string($c->name, true, array('context'=>context::instance_by_id($c->contextid))),
-//             'users'=>$DB->count_records('cohort_members', array('cohortid'=>$c->id)),
-//             'enrolled'=>in_array($c->id, $enrolled)
-//         );
-//     }
-//     $rs->close();
-//     return $cohorts;
-// }
 
 /**
  * Check if cohort exists and user is allowed to enrol it.

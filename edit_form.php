@@ -52,6 +52,9 @@ class enrol_ilios_edit_form extends moodleform {
                          ENROL_INSTANCE_DISABLED => get_string('no'));
         $mform->addElement('select', 'status', get_string('status', 'enrol_ilios'), $options);
 
+
+        // TODO: Move this into 'if ($instance->id)'.
+        $usertypes = array('Learner', 'Instructor');
         $schooloptions = array('' => get_string('choosedots'));
         $programoptions = array('' => get_string('choosedots'));
         $cohortoptions = array('' => get_string('choosedots'));
@@ -62,6 +65,7 @@ class enrol_ilios_edit_form extends moodleform {
         if ($instance->id) {
             $synctype = $instance->customchar1;
             $syncid = $instance->customint1;
+            $instance->customint2 = isset($instance->customint2) ? $instance->customint2 : 0;
             $syncinfo = json_decode($instance->customtext1);
 
             $instance->schoolid = $syncinfo->school->id;
@@ -86,11 +90,16 @@ class enrol_ilios_edit_form extends moodleform {
 
             if ($synctype == 'learnerGroup') {
                 $instance->learnergroupid = $syncid;
-                $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
+                if (!empty($instance->customint2)) {
+                    $group = $http->getGroupData('learnerGroup', $instance->learnergroupid);
+                } else {
+                    $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
+                }
                 $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
                 $grouptitle = $group->title.
-                            ' ('. count($group->children) .')'.
-                            ' ('. count($group->users) .')';
+                            ' ('. count($group->children) .')';
+                $grouptitle .= ' ('. count($group->users) .')';
+                // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
                 $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
 
                 if (!empty($group->parent)) {
@@ -114,6 +123,16 @@ class enrol_ilios_edit_form extends moodleform {
                     $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
                 }
             }
+        }
+
+        if ($instance->id) {
+            $mform->addElement('select', 'selectusertype', get_string('selectusertype', 'enrol_ilios'), $usertypes);
+            $mform->setConstant('selectusertype', $instance->customint2);
+            $mform->hardFreeze('selectusertype', $instance->customint2);
+        } else {
+            $mform->addElement('select', 'selectusertype', get_string('selectusertype', 'enrol_ilios'), $usertypes);
+            // $mform->addRule('selectusertype', get_string('required'), 'required', null, 'client');
+            $mform->addHelpButton('selectusertype', 'selectusertype', 'enrol_ilios');
         }
 
         if ($instance->id) {
@@ -163,6 +182,7 @@ class enrol_ilios_edit_form extends moodleform {
 
         } else {
             $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroupoptions);
+            // $mform->addRule('selectlearnergroup', get_string('required'), 'required', null, 'client');
             $mform->addHelpButton('selectlearnergroup', 'learnergroup', 'enrol_ilios');
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
             $mform->registerNoSubmitButton('updatelearnergroupoptions');
@@ -183,7 +203,6 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->addElement('submit', 'updatesubgroupoptions', 'Update subgroup option');
         }
 
-
         // Role assignment
         $mform->addElement('header','roleassignments', get_string('roleassignments', 'role'));
 
@@ -199,38 +218,20 @@ class enrol_ilios_edit_form extends moodleform {
                     $roles[$instance->roleid] = get_string('error');
                 }
             }
-            if (!isset($roles[$instance->customint2])) {
-                if ($role = $DB->get_record('role', array('id'=>$instance->customint2))) {
-                    $roles = role_fix_names($roles, $coursecontext, ROLENAME_ALIAS, true);
-                    $roles[$instance->customint2] = role_get_name($role, $coursecontext);
-                } else {
-                    $roles[$instance->customint2] = get_string('error');
-                }
-            }
         }
 
-        // Learner role
-        $mform->addElement('select', 'roleid', get_string('assignlearnerrole', 'enrol_ilios'), $roles);
+        $mform->addElement('select', 'roleid', get_string('assignrole', 'enrol_ilios'), $roles);
         $mform->setDefault('roleid', $enrol->get_config('roleid'));
-        $mform->addHelpButton('roleid', 'assignlearnerrole', 'enrol_ilios');
 
-        // Instructor role (customint2)
-        $mform->addElement('select', 'instructorroleid', get_string('assigninstructorrole', 'enrol_ilios'), $roles);
-        $mform->setDefault('instructorroleid', 0);
-        $mform->disabledIf('instructorroleid', 'selectlearnergroup', 'eq', '');
-        $mform->addHelpButton('instructorroleid', 'assigninstructorrole', 'enrol_ilios');
+        // Group assignment
+        // $mform->addElement('header','groupassignment', 'Group assignment');
 
         $groups = array(0 => get_string('none'));
         foreach (groups_get_all_groups($course->id) as $group) {
             $groups[$group->id] = format_string($group->name, true, array('context'=>$coursecontext));
         }
 
-        // Group assignment
-        // $mform->addElement('header','groupassignment', 'Group assignment');
-
         $mform->addElement('select', 'customint6', get_string('addgroup', 'enrol_ilios'), $groups);
-        // $mform->addElement('select', 'customint6', 'Add to group', $groups);
-
 
         $mform->addElement('hidden', 'courseid', null);
         $mform->setType('courseid', PARAM_INT);
@@ -420,6 +421,14 @@ class enrol_ilios_edit_form extends moodleform {
 
         $errors = parent::validation($data, $files);
 
+        // Make sure a learner group is selected if customint2 = 1 (instructor)
+        if (!empty($data['selectusertype'])) {
+            if (empty($data['selectlearnergroup'])) {
+                $errors['selectlearnergroup'] = get_string('requiredforinstructor', 'enrol_ilios');
+            }
+        }
+
+        // Check for existing role
         $selectgrouptype = 'cohort';
         list($selectgroupid,$selecttitle) = explode(':',$data['selectcohort'], 2);
         if (!empty($data['selectlearnergroup'])){
@@ -430,9 +439,14 @@ class enrol_ilios_edit_form extends moodleform {
             }
         }
 
-        $params = array('roleid'=>$data['roleid'], 'customchar1'=>$selectgrouptype,'customint1'=>$selectgroupid, 'courseid'=>$data['courseid'], 'id'=>$data['id']);
-        if ($DB->record_exists_select('enrol', "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1 AND courseid = :courseid AND enrol = 'ilios' AND id <> :id", $params)) {
-            $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
+        $params = array('roleid'=>$data['roleid'], 'customchar1'=>$selectgrouptype,'customint1'=>$selectgroupid,'customint2'=>$data['selectusertype'],'courseid'=>$data['courseid'], 'id'=>$data['id']);
+        // customint2 could be NULL or 0 on the database
+        if (empty($data['selectusertype']) && $DB->record_exists_select('enrol', "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1 AND customint2 IS NULL AND courseid = :courseid AND enrol = 'ilios' AND id <> :id", $params)) {
+                $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
+        } else {
+            if ($DB->record_exists_select('enrol', "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1 AND customint2 = :customint2 AND courseid = :courseid AND enrol = 'ilios' AND id <> :id", $params)) {
+                $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
+            }
         }
 
         return $errors;
