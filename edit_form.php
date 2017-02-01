@@ -81,7 +81,10 @@ class enrol_ilios_edit_form extends moodleform {
             $instance->cohortid = $syncinfo->cohort->id;
             $cohort = $http->getbyid('cohorts', $instance->cohortid);
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
-            $cohortoptions = array( $instance->selectcohortindex => $cohort->title );
+            $cohortoptions = array( $instance->selectcohortindex =>
+                                    $cohort->title
+                                    .' ('.count($cohort->learnerGroups).')'
+                                    .' ('.count($cohort->users).')');
 
             $instance->learnergroupid = '';
             $instance->selectlearnergroupindex = '';
