@@ -289,9 +289,6 @@ class enrol_ilios_plugin extends enrol_plugin {
     /**
      * Returns a button to enrol a ilios or its users through the manual enrolment plugin.
      *
-     * This function also adds a quickenrolment JS ui to the page so that users can be enrolled
-     * via AJAX.
-     *
      * @param course_enrolment_manager $manager
      * @return enrol_user_button
      */
@@ -303,39 +300,6 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         $iliosurl = new moodle_url('/enrol/ilios/edit.php', array('courseid' => $course->id));
         $button = new enrol_user_button($iliosurl, get_string('enrol', 'enrol_ilios'), 'get');
-        $button->class .= ' enrol_ilios_plugin';
-
-        $button->strings_for_js(array(
-            'enrol',
-            'synced',
-            ), 'enrol');
-        $button->strings_for_js(array(
-            'ajaxmore',
-            'enrolilios',
-            'enrolilioscohort',
-            'enroliliosgroup',
-            'enroliliosusers',
-            'iliosgroups',
-            'iliosgroupsearch',
-            'school',
-            'program',
-            'cohort'
-            ), 'enrol_ilios');
-        $button->strings_for_js('assignroles', 'role');
-        $button->strings_for_js('ilios', 'enrol_ilios');
-        $button->strings_for_js('users', 'moodle');
-
-        // No point showing this at all if the user cant manually enrol users.
-        $hasmanualinstance = has_capability('enrol/manual:enrol', $manager->get_context()) && $manager->has_instance('manual');
-
-        $modules = array('moodle-enrol_ilios-quickenrolment', 'moodle-enrol_ilios-quickenrolment-skin');
-        $function = 'M.enrol_ilios.quickenrolment.init';
-        $arguments = array(
-            'courseid'        => $course->id,
-            'ajaxurl'         => '/enrol/ilios/ajax.php',
-            'url'             => $manager->get_moodlepage()->url->out(false),
-            'manualEnrolment' => $hasmanualinstance);
-        $button->require_yui_module($modules, $function, array($arguments));
 
         return $button;
     }

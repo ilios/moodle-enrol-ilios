@@ -67,22 +67,6 @@ $outcome->error = '';
 $enrol = enrol_get_plugin('ilios');
 
 switch ($action) {
-    case 'getassignable':
-        $otheruserroles = optional_param('otherusers', false, PARAM_BOOL);
-        $outcome->response = array_reverse($manager->get_assignable_roles($otheruserroles), true);
-        break;
-    case 'getdefaultiliosrole': //TODO: use in ajax UI MDL-24280
-        $iliosenrol = enrol_get_plugin('ilios');
-        $outcome->response = $iliosenrol->get_config('roleid');
-        break;
-    case 'getcohorts':
-        require_capability('moodle/course:enrolconfig', $context);
-        $offset = optional_param('offset', 0, PARAM_INT);
-        $search  = optional_param('search', '', PARAM_RAW);
-        $outcome->response = enrol_ilios_search_cohorts($manager, $offset, 25, $search);
-        // Some browsers reorder collections by key.
-        $outcome->response['cohorts'] = array_values($outcome->response['cohorts']);
-        break;
     case 'getselectschooloptions':
         require_capability('moodle/course:enrolconfig', $context);
         $http = $enrol->get_http_client();
@@ -93,6 +77,7 @@ switch ($action) {
         }
         $outcome->response = $schoolarray;
         break;
+
     case 'getselectprogramoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $sid      = required_param('filterid', PARAM_INT); // school id
@@ -105,6 +90,7 @@ switch ($action) {
         }
         $outcome->response = $programarray;
         break;
+
     case 'getselectcohortoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $pid    = required_param('filterid', PARAM_INT);
@@ -203,44 +189,6 @@ switch ($action) {
         $outcome->response = $instructorgroupoptions;
         break;
 
-    case 'enrolilios':
-        require_capability('moodle/course:enrolconfig', $context);
-        require_capability('enrol/ilios:config', $context);
-        $roleid = required_param('roleid', PARAM_INT);
-        $cohortid = required_param('cohortid', PARAM_INT);
-
-        $roles = $manager->get_assignable_roles();
-        if (!enrol_ilios_can_view_cohort($cohortid) || !array_key_exists($roleid, $roles)) {
-            throw new enrol_ajax_exception('errorenrolilios');
-        }
-        $enrol = enrol_get_plugin('ilios');
-        $enrol->add_instance($manager->get_course(), array('customint1' => $cohortid, 'roleid' => $roleid));
-        $trace = new null_progress_trace();
-        enrol_ilios_sync($trace, $manager->get_course()->id);
-        $trace->finished();
-        break;
-    case 'enroliliosusers':
-        //TODO: this should be moved to enrol_manual, see MDL-35618.
-        require_capability('enrol/manual:enrol', $context);
-        $roleid = required_param('roleid', PARAM_INT);
-        $cohortid = required_param('cohortid', PARAM_INT);
-
-        $roles = $manager->get_assignable_roles();
-        if (!enrol_ilios_can_view_cohort($cohortid) || !array_key_exists($roleid, $roles)) {
-            throw new enrol_ajax_exception('errorenrolilios');
-        }
-
-        $result = enrol_ilios_enrol_all_users($manager, $cohortid, $roleid);
-        if ($result === false) {
-            throw new enrol_ajax_exception('errorenroliliosusers');
-        }
-
-        $outcome->success = true;
-        $outcome->response->users = $result;
-        $outcome->response->title = get_string('success');
-        $outcome->response->message = get_string('enrollednewusers', 'enrol', $result);
-        $outcome->response->yesLabel = get_string('ok');
-        break;
     default:
         throw new enrol_ajax_exception('unknowajaxaction');
 }

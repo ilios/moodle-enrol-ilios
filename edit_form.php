@@ -53,8 +53,7 @@ class enrol_ilios_edit_form extends moodleform {
         $mform->addElement('select', 'status', get_string('status', 'enrol_ilios'), $options);
 
 
-        // TODO: Move this into 'if ($instance->id)'.
-        $usertypes = array('Learner', 'Instructor');
+        $usertypes = array(get_string('learner', 'enrol_ilios'), get_string('instructor', 'enrol_ilios'));
         $schooloptions = array('' => get_string('choosedots'));
         $programoptions = array('' => get_string('choosedots'));
         $cohortoptions = array('' => get_string('choosedots'));
