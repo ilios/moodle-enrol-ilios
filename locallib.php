@@ -169,6 +169,29 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
     $instances->close();
     unset($iliosusers);
 
+    // Now assign all necessary roles to enrolled users - skip suspended instances and users.
+    $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
+    $sql = "SELECT e.roleid, ue.userid, c.id AS contextid, e.id AS itemid, e.courseid
+              FROM {user_enrolments} ue
+              JOIN {enrol} e ON (e.id = ue.enrolid AND e.enrol = 'ilios' AND e.status = :statusenabled $onecourse)
+              JOIN {role} r ON (r.id = e.roleid)
+              JOIN {context} c ON (c.instanceid = e.courseid AND c.contextlevel = :coursecontext)
+              JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
+         LEFT JOIN {role_assignments} ra ON (ra.contextid = c.id AND ra.userid = ue.userid AND ra.itemid = e.id AND ra.component = 'enrol_ilios' AND e.roleid = ra.roleid)
+             WHERE ue.status = :useractive AND ra.id IS NULL";
+    $params = array();
+    $params['statusenabled'] = ENROL_INSTANCE_ENABLED;
+    $params['useractive'] = ENROL_USER_ACTIVE;
+    $params['coursecontext'] = CONTEXT_COURSE;
+    $params['courseid'] = $courseid;
+
+    $rs = $DB->get_recordset_sql($sql, $params);
+    foreach($rs as $ra) {
+        role_assign($ra->roleid, $ra->userid, $ra->contextid, 'enrol_ilios', $ra->itemid);
+        $trace->output("assigning role: $ra->userid ==> $ra->courseid as ".$allroles[$ra->roleid]->shortname, 1);
+    }
+    $rs->close();
+
     // Remove unwanted roles - sync role can not be changed, we only remove role when unenrolled.
     $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
     $sql = "SELECT ra.roleid, ra.userid, ra.contextid, ra.itemid, e.courseid
