@@ -25,6 +25,10 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+// require_once($CFG->dirroot . '/enrol/locallib.php');
+// require_once($CFG->dirroot . '/enrol/ilios/lib.php');
+// require_once('lib.php');
+
 if ($ADMIN->fulltree) {
 
     //--- general settings -----------------------------------------------------------------------------------
@@ -50,5 +54,25 @@ if ($ADMIN->fulltree) {
             ENROL_EXT_REMOVED_UNENROL        => get_string('extremovedunenrol', 'enrol'),
             ENROL_EXT_REMOVED_SUSPENDNOROLES => get_string('extremovedsuspendnoroles', 'enrol'));
         $settings->add(new admin_setting_configselect('enrol_ilios/unenrolaction', get_string('extremovedaction', 'enrol'), get_string('extremovedaction_help', 'enrol'), ENROL_EXT_REMOVED_UNENROL, $options));
+
+
+        // Category role assignment sync
+        require_once($CFG->dirroot . '/enrol/ilios/lib.php');
+
+        $atoken = new stdClass;
+        $atoken->token = get_config('enrol_ilios', 'apikey');
+        $atoken->expires = get_config('enrol_ilios', 'apikeyexpires');
+
+        $iliosclient = new ilios_client( get_config('enrol_ilios', 'host_url'),
+                                         get_config('enrol_ilios', 'userid'),
+                                         get_config('enrol_ilios', 'secret'),
+                                         $atoken );
+        echo "<pre>";
+        // var_dump($iliosclient);
+        $schools = $iliosclient->get('schools', '', array('title' => "ASC"));
+        // $schools = $iliosclient->get('schools');
+        // var_dump($schools);
+        // var_dump($atoken);
+        echo "</pre>";
     }
 }
