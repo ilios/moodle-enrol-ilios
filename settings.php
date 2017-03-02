@@ -72,7 +72,7 @@ if ($ADMIN->fulltree) {
             '<a href="delete.php">delete</a>') );
         $table->data[] = new html_table_row( array(
             "School of Medicine",
-            "Faculty",
+            "Course leader",
             " => ",
             "School of Medicine / Bridges",
             "SOM Participant",
@@ -94,10 +94,25 @@ if ($ADMIN->fulltree) {
         // Add new instance
 
         $settings->add(new admin_setting_heading('enrol_ilios_add_new_role_assignment', 'Add new role assignment', ''));
+
         require_once($CFG->libdir.'/coursecatlib.php');
 
-        $options = array();
-        $options[] = "Select a school";
+        $options = array('' => "Select a school");
+
+        // require_once($CFG->dirroot . '/enrol/ilios/lib.php');
+        // $atoken = new stdClass;
+        // $atoken->token = get_config('enrol_ilios', 'apikey');
+        // $atoken->expires = get_config('enrol_ilios', 'apikeyexpires');
+        // $iliosclient = new ilios_client(get_config('enrol_ilios', 'host_url'),
+        //                                 get_config('enrol_ilios', 'userid'),
+        //                                 get_config('enrol_ilios', 'secret'),
+        //                                 $atoken);
+
+        // $schools = $iliosclient->get('schools', '', array('title' => "ASC"));
+
+        // foreach ($schools as $school) {
+        //     $options[] = array( "{$school->id}" => $school->title );
+        // }
         $options[] = "School of Dentistry";
         $options[] = "School of Medicine";
         $options[] = "School of Nursing";
@@ -107,14 +122,15 @@ if ($ADMIN->fulltree) {
         $options = array();
         $options[] = "Select a user role";
         $options[] = "Instructor";
+        $options[] = "Course leader";
         $options[] = "Developer";
         $settings->add(new admin_setting_configselect('enrol_ilios/iliosrole', 'Ilios user role', '', 0, $options));
 
-        $options = array( '0' => 'Select a category' );
+        $options = array( '' => 'Select a category' );
         $options = array_merge($options, coursecat::make_categories_list('moodle/category:manage'));
         $settings->add(new admin_setting_configselect('enrol_ilios/category', 'Select a category', '', 0, $options));
 
-        $options = array( '0' => 'Select a role' );
+        $options = array( '' => 'Select a role' );
         $options = array_merge( $options, get_default_enrol_roles(context_system::instance()) );
         $settings->add(new admin_setting_configselect('enrol_ilios/role', 'Select a role', '', 0, $options));
 
