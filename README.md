@@ -3,6 +3,11 @@ A Moodle Enrollment plugin for the Ilios Curriculum Management system.
 
 # Installation
 
+## Prerequisites
+
+This plugin has a dependency on the [Ilios API client plugin](https://github.com/ilios/local_iliosapiclient).
+Please install that plugin first, see its README file for instructions.
+
 ## Install with git
 * use a command line interface of your choice on the destination system (server with moodle installation)
 * switch to the moodle enrol folder: `cd /path/to/moodle/enrol/`
