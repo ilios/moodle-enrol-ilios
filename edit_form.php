@@ -93,7 +93,7 @@ class enrol_ilios_edit_form extends moodleform {
             if ($synctype == 'learnerGroup') {
                 $instance->learnergroupid = $syncid;
                 if (!empty($instance->customint2)) {
-                    $group = $http->getGroupData('learnerGroup', $instance->learnergroupid);
+                    $group = $enrol->getGroupData('learnerGroup', $instance->learnergroupid);
                 } else {
                     $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 }

@@ -33,7 +33,8 @@ require_once $CFG->libdir.'/filelib.php';
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class enrol_ilios_plugin extends enrol_plugin {
-    /** @var object Ilios client object */
+
+    /** @var \local_iliosapiclient\ilios_client $iliosclient */
     protected $iliosclient;
 
     /**
@@ -82,7 +83,7 @@ class enrol_ilios_plugin extends enrol_plugin {
     /**
      * Returns the Ilios Client for API access
      *
-     * @return local_iliosapiclient\ilios_client object
+     * @return \local_iliosapiclient\ilios_client
      */
     public function get_http_client() {
         return $this->iliosclient;
@@ -410,6 +411,106 @@ class enrol_ilios_plugin extends enrol_plugin {
     public function restore_group_member($instance, $groupid, $userid) {
         // Nothing to do here, the group members are added in $this->restore_group_restored()
         return;
+    }
+
+    /**
+     * Recursive get for learner group data with instructors info, to compensate
+     * something that the ILIOS API fails to do!
+     *
+     * @param  string $groupType singular noun of the group type, e.g. cohort, learnerGroup
+     * @param  string $groupId   the id for the corresponding group type, e.g. cohort id,  learner group id.
+     *
+     * @return object groupObject returned by the ILIOS api in addition of populating
+     *                            the instructor array with correct ids, which is to
+     *                            iterate into offerings and ilmSessions and fetch the
+     *                            associated instructors and instructor groups. Should
+     *                            also iterate into subgroups.
+     */
+    public function getGroupData($grouptype, $groupid) {
+        $client = $this->get_http_client();
+        // Ilios API uses a plural noun, append an 's'.
+        $group = $client->getbyid( $grouptype.'s', $groupid );
+
+        if ($grouptype === 'learnerGroup') {
+            $group->instructors = $this->getInstructorIdsFromGroup($grouptype, $groupid);
+            asort($group->instructors);
+        }
+
+        return $group;
+    }
+
+    private function getInstructorIdsFromGroup( $grouptype, $groupid ) {
+
+        $client = $this->get_http_client();
+
+        // Ilios API uses a plural noun, append an 's'.
+        $group = $client->getbyid( $grouptype.'s', $groupid );
+
+        $instructorGroupIds = array();
+        $instructorIds = array();
+
+        // get instructors/instructor-groups from the offerings that this learner group is being taught in.
+        if (!empty($group->offerings)) {
+            $offerings = $client->getbyids('offerings', $group->offerings);
+
+            foreach ($offerings as $offering) {
+                if (empty($offering->instructors)) {
+                    // no instructor AND no instructor groups have been set for this offering.
+                    // fall back to the default instructors/instructor-groups defined for the learner group.
+                    $instructorIds = array_merge($instructorIds, $group->instructors);
+                    $instructorGroupIds = array_merge($instructorGroupIds, $group->instructorGroups);
+                } else {
+                    // if there are instructors and/or instructor-groups set on the offering,
+                    // then use these.
+                    $instructorIds = array_merge($instructorIds, $offering->instructors);
+                    $instructorGroupIds = array_merge($instructorGroupIds, $offering->instructorGroups);
+                }
+            }
+
+        }
+
+        // get instructors/instructor-groups from the ilm sessions that this learner group is being taught in.
+        // (this is a rinse/repeat from offerings-related code above)
+        if (!empty($group->ilmSessions)) {
+            $ilms = $client->getbyids('ilmSessions', $group->ilmSessions);
+
+            foreach ($ilms as $ilm) {
+                if (empty($ilm->instructors) && empty($ilm->instructorGroups)) {
+                    // no instructor AND no instructor groups have been set for this offering.
+                    // fall back to the default instructors/instructor-groups defined for the learner group.
+                    $instructorIds = array_merge($instructorIds, $group->instructors);
+                    $instructorGroupIds = array_merge($instructorGroupIds, $group->instructorGroups);
+                } else {
+                    // if there are instructors and/or instructor-groups set on the offering,
+                    // then use these.
+                    $instructorIds = array_merge($instructorIds, $ilm->instructors);
+                    $instructorGroupIds = array_merge($instructorGroupIds, $ilm->instructorGroups);
+                }
+            }
+        }
+
+        // get instructors from sub-learnerGroups
+        if (!empty($group->children)) {
+            foreach($group->children as $subgroupid) {
+                $instructorIds = array_merge($instructorIds, $this->getInstructorIdsFromGroup('learnerGroup', $subgroupid));
+                // We don't care about instructor groups here, we will merge instructor groups into the $instructorIds array later.
+            }
+        }
+
+        // next, get the ids of all instructors from the instructor-groups that we determined as relevant earlier.
+        // but first.. let's de-dupe them.
+        $instructorGroupIds = array_unique($instructorGroupIds);
+        if (!empty($instructorGroupIds)) {
+            $instructorGroups = $client->getbyids('instructorGroups', $instructorGroupIds);
+            foreach ($instructorGroups as $instructorGroup) {
+                $instructorIds = array_merge($instructorIds, $instructorGroup->users);
+            }
+        }
+
+        // finally, we retrieve all the users that were identified as relevant instructors earlier.
+        $instructorIds = array_unique($instructorIds);
+
+        return $instructorIds;
     }
 }
 
