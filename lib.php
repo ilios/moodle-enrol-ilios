@@ -64,6 +64,22 @@ class enrol_ilios_plugin extends enrol_plugin {
     }
 
     /**
+     * @inheritdoc
+     */
+    public function can_delete_instance($instance) {
+        $context = context_course::instance($instance->courseid);
+        return has_capability('enrol/ilios:config', $context);
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function can_hide_show_instance($instance) {
+        $context = context_course::instance($instance->courseid);
+        return has_capability('enrol/ilios:config', $context);
+    }
+
+    /**
      * Returns the Ilios Client for API access
      *
      * @return ilios_client object
