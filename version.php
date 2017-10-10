@@ -30,5 +30,5 @@ $plugin->requires  = 2013110500;        // Requires this Moodle version
 $plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
 $plugin->cron      = 55*60;
 $plugin->dependencies = array(
-    'local_iliosapiclient' => 2017060800,
+    'local_iliosapiclient' => 2017071700,
 );
