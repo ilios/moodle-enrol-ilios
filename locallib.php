@@ -76,7 +76,7 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
 
         if (!empty($instance->customint2)) {
             // Need to get instructor ids.  This function takes longer to run.
-            $group = $http->getGroupData($synctype, $syncid);
+            $group = $plugin->getGroupData($synctype, $syncid);
         } else {
             // No need to get instructor ids.
             $group = $http->getbyid( $synctype.'s', $syncid);

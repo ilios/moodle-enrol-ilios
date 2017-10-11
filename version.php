@@ -28,4 +28,7 @@ defined('MOODLE_INTERNAL') || die();
 $plugin->version   = 2017020100;        // The current plugin version (Date: YYYYMMDDXX)
 $plugin->requires  = 2013110500;        // Requires this Moodle version
 $plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
-$plugin->cron      = 60*60;             // run cron every hour by default, it is not out-of-sync often
+$plugin->cron      = 55*60;
+$plugin->dependencies = array(
+    'local_iliosapiclient' => 2017071700,
+);
