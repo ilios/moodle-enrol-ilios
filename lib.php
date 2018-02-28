@@ -217,6 +217,25 @@ class enrol_ilios_plugin extends enrol_plugin {
         return $icons;
     }
 
+
+    /**
+     * Execute synchronisation.
+     * @param progress_trace
+     * @return int exit code, 0 means ok, 2 means plugin disabled.
+     * @throws \Exception
+     */
+    public function sync($trace) {
+        global $CFG;
+        if (!enrol_is_enabled('ilios')) {
+            return 2;
+        }
+
+        require_once("$CFG->dirroot/enrol/ilios/locallib.php");
+
+        enrol_ilios_sync($trace);
+
+        return 0;
+    }
     /**
      * Called for all enabled enrol plugins that returned true from is_cron_required().
      * @return void
