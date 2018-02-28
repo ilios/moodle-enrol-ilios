@@ -33,6 +33,7 @@ require_once($CFG->dirroot . '/enrol/locallib.php');
  * @param progress_trace $trace
  * @param int $courseid one course, empty mean all
  * @return int 0 means ok, 1 means error, 2 means plugin disabled
+ * @throws \Exception
  */
 function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
     global $CFG, $DB;
