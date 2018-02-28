@@ -54,7 +54,7 @@ class ilios_sync_task extends \core\task\scheduled_task {
         }
 
         $plugin = enrol_get_plugin('ilios');
-        $result = $plugin->sync(new \null_progress_trace());
+        $result = $plugin->sync(new \text_progress_trace());
         return $result;
 
     }
