@@ -236,24 +236,6 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         return 0;
     }
-    /**
-     * Called for all enabled enrol plugins that returned true from is_cron_required().
-     * @return void
-     */
-    public function cron($trace=null) {
-        global $CFG;
-
-        require_once("$CFG->dirroot/enrol/ilios/locallib.php");
-        if ($trace === null) {
-            $trace = new text_progress_trace();
-        }
-        try {
-            enrol_ilios_sync($trace);
-        } catch (Exception $e) {
-            $trace->output("Ilios Sync cron failed: ".$e->getMessage(), 1);
-        }
-        $trace->finished();
-    }
 
     // /**
     //  * Called after updating/inserting course.
