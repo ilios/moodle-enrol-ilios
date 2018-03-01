@@ -15,19 +15,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Ilios enrolment plugin version specification.
+ * Definition of Ilios enrolment scheduled tasks.
  *
  * @package    enrol_ilios
- * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  2018 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2018022800;        // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2013110500;        // Requires this Moodle version
-$plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
-$plugin->dependencies = array(
-    'local_iliosapiclient' => 2017071700,
+$tasks = array(
+    array(
+        'classname' => '\enrol_ilios\task\ilios_sync_task',
+        'blocking' => 0,
+        'minute' => '55',
+        'hour' => '*',
+        'day' => '*',
+        'dayofweek' => '*',
+        'month' => '*'
+    )
 );

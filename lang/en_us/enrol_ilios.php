@@ -41,6 +41,7 @@ $string['ilios'] = 'Ilios';
 $string['ilioscohorts'] = 'Cohorts';
 $string['iliosgroups'] = 'Groups';
 $string['iliosgroupsearch'] = 'Search';
+$string['iliossync'] = 'Ilios enrolment sync';
 $string['ilios:config'] = 'Configure ilios instances';
 $string['ilios:unenrol'] = 'Unenroll suspended users';
 $string['instanceexists'] = 'Ilios sync is already synchronized with selected role';
