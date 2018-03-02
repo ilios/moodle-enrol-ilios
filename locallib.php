@@ -126,13 +126,13 @@ function enrol_ilios_sync(progress_trace $trace, $courseid = NULL) {
                     $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
                     // Continue if already enrolled with active status
-                    if (!empty($ue) && $status === $ue->status) {
+                    if (!empty($ue) && $status === (int) $ue->status) {
                         continue;
                     }
 
                     // Enroll user
                     $plugin->enrol_user($instance, $userid, $instance->roleid, 0, 0, $status);
-                    if (!empty($ue) && $status !== $ue->status) {
+                    if (!empty($ue) && $status !== (int) $ue->status) {
                         $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
                     } else {
                         $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
