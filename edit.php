@@ -25,7 +25,6 @@
 
 require('../../config.php');
 require_once("$CFG->dirroot/enrol/ilios/edit_form.php");
-require_once("$CFG->dirroot/enrol/ilios/locallib.php");
 require_once("$CFG->dirroot/group/lib.php");
 
 $courseid = required_param('courseid', PARAM_INT);
@@ -46,6 +45,7 @@ if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
 }
 
+/** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');
 
 if ($instanceid) {
@@ -150,7 +150,7 @@ if ($mform->is_cancelled()) {
     }
 
     $trace = new null_progress_trace();
-    enrol_ilios_sync($trace, $course->id);
+    $enrol->sync($trace, $course->id);
     $trace->finished();
     redirect($returnurl);
 }

@@ -30,7 +30,6 @@ define('AJAX_SCRIPT', true);
 
 require('../../config.php');
 require_once($CFG->dirroot.'/enrol/locallib.php');
-require_once($CFG->dirroot.'/enrol/ilios/locallib.php');
 require_once($CFG->dirroot.'/group/lib.php');
 
 // Must have the sesskey.
@@ -64,6 +63,7 @@ $outcome->success = true;
 $outcome->response = new stdClass();
 $outcome->error = '';
 
+/** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');
 
 switch ($action) {
