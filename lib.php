@@ -52,12 +52,13 @@ class enrol_ilios_plugin extends enrol_plugin {
     }
 
     /**
-     * Destructor
+     * Updates the Ilios API token in the plugin configuration.
+     *
+     * @param \local_iliosapiclient\ilios_client $ilios_client
      */
-    public function __destruct() {
-        $accesstoken = $this->iliosclient->getAccessToken();
+    protected function save_api_token(\local_iliosapiclient\ilios_client $ilios_client) {
+        $accesstoken = $ilios_client->getAccessToken();
         $apikey = $this->get_config('apikey');
-
         if (!empty($accesstoken) && ($apikey !== $accesstoken->token)) {
             $this->set_config('apikey', $accesstoken->token);
             $this->set_config('apikeyexpires', $accesstoken->expires);
@@ -447,6 +448,9 @@ class enrol_ilios_plugin extends enrol_plugin {
         $rs->close();
 
         $trace->output('...user enrolment synchronisation finished.');
+
+        // cleanup
+        $this->save_api_token($http);
 
         return 0;
     }
