@@ -86,7 +86,14 @@ switch ($action) {
         $programs = $http->get('programs', array('school' => $sid), array('title' => "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
-            $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;
+            $key = $program->id;
+            foreach (array('shortTitle', 'title') as $attr) {
+                $key .= ':';
+                if (property_exists($program, $attr)) {
+                    $key .= $program->$attr;
+                }
+            }
+            $programarray[$key] = $program->title;
         }
         $outcome->response = $programarray;
         break;
