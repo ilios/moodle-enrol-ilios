@@ -74,7 +74,14 @@ class enrol_ilios_edit_form extends moodleform {
 
             $instance->programid = $syncinfo->program->id;
             $program = $http->getbyid('programs', $instance->programid);
-            $instance->selectprogramindex = "$instance->programid:$program->shortTitle:$program->title";
+            $instance->selectprogramindex = $instance->programid;
+
+            foreach (array('shortTitle', 'title') as $attr) {
+                $instance->selectprogramindex .= ':';
+                if (property_exists($program, $attr)) {
+                    $instance->selectprogramindex .= $program->$attr;
+                }
+            }
             $programoptions = array( $instance->selectprogramindex => $program->title );
 
             $instance->cohortid = $syncinfo->cohort->id;
@@ -334,7 +341,14 @@ class enrol_ilios_edit_form extends moodleform {
 
             if (!empty($programs)) {
                 foreach ($programs as $program) {
-                    $programoptions["$program->id:$program->shortTitle:$program->title"] = $program->title;
+                    $key = $program->id;
+                    foreach (array('shortTitle', 'title') as $attr) {
+                        $key .= ':';
+                        if (property_exists($program, $attr)) {
+                            $key .= $program->$attr;
+                        }
+                    }
+                    $programoptions[$key] = $program->title;
                 }
                 $prog_el->load($programoptions);
             }

@@ -30,7 +30,6 @@ define('AJAX_SCRIPT', true);
 
 require('../../config.php');
 require_once($CFG->dirroot.'/enrol/locallib.php');
-require_once($CFG->dirroot.'/enrol/ilios/locallib.php');
 require_once($CFG->dirroot.'/group/lib.php');
 
 // Must have the sesskey.
@@ -64,6 +63,7 @@ $outcome->success = true;
 $outcome->response = new stdClass();
 $outcome->error = '';
 
+/** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');
 
 switch ($action) {
@@ -86,7 +86,14 @@ switch ($action) {
         $programs = $http->get('programs', array('school' => $sid), array('title' => "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
-            $programarray["$program->id:$program->shortTitle:$program->title"] = $program->title;
+            $key = $program->id;
+            foreach (array('shortTitle', 'title') as $attr) {
+                $key .= ':';
+                if (property_exists($program, $attr)) {
+                    $key .= $program->$attr;
+                }
+            }
+            $programarray[$key] = $program->title;
         }
         $outcome->response = $programarray;
         break;
