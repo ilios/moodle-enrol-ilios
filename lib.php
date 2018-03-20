@@ -294,6 +294,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $trace->output("Enrolling students to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
                     $users = $http->getbyids('users', $group->users);
                 }
+                $trace->output(count($users) . " Ilios users found.");
 
                 foreach ($users as $user) {
                     // Fetch user info if not cached in $iliosusers
@@ -336,30 +337,33 @@ class enrol_ilios_plugin extends enrol_plugin {
                 }
 
                 // Unenrol as necessary.
-                if (!empty($enrolleduserids)) {
-                    $sql = "SELECT ue.*
-                              FROM {user_enrolments} ue
-                             WHERE ue.enrolid = $instance->id
-                               AND ue.userid NOT IN ( ".implode(",", $enrolleduserids)." )";
+                $trace->output("Unenrolling users from Course ID ".$instance->courseid." with Role ID ".$instance->roleid." that no longer associate with Ilios Sync ID ".$instance->id.".");
 
-                    $rs = $DB->get_recordset_sql($sql);
-                    foreach($rs as $ue) {
-                        if ($unenrolaction == ENROL_EXT_REMOVED_UNENROL) {
-                            // Remove enrolment together with group membership, grades, preferences, etc.
-                            $this->unenrol_user($instance, $ue->userid);
-                            $trace->output("unenrolling: $ue->userid ==> ".$instance->courseid." via Ilios $synctype $syncid", 1);
-                        } else { // ENROL_EXT_REMOVED_SUSPENDNOROLES
-                            // Just disable and ignore any changes.
-                            if ($ue->status != ENROL_USER_SUSPENDED) {
-                                $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
-                                $context = context_course::instance($instance->courseid);
-                                role_unassign_all(array('userid'=>$ue->userid, 'contextid'=>$context->id, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
-                                $trace->output("suspending and unsassigning all roles: userid ".$ue->userid." ==> courseid ".$instance->courseid, 1);
-                            }
+                $sql = "SELECT ue.*
+                      FROM {user_enrolments} ue
+                      WHERE ue.enrolid = $instance->id";
+
+                if (!empty($enrolleduserids)) {
+                    $sql .= " AND ue.userid NOT IN ( ".implode(",", $enrolleduserids)." )";
+                }
+
+                $rs = $DB->get_recordset_sql($sql);
+                foreach($rs as $ue) {
+                    if ($unenrolaction == ENROL_EXT_REMOVED_UNENROL) {
+                        // Remove enrolment together with group membership, grades, preferences, etc.
+                        $this->unenrol_user($instance, $ue->userid);
+                        $trace->output("unenrolling: $ue->userid ==> ".$instance->courseid." via Ilios $synctype $syncid", 1);
+                    } else { // ENROL_EXT_REMOVED_SUSPENDNOROLES
+                        // Just disable and ignore any changes.
+                        if ($ue->status != ENROL_USER_SUSPENDED) {
+                            $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
+                            $context = context_course::instance($instance->courseid);
+                            role_unassign_all(array('userid'=>$ue->userid, 'contextid'=>$context->id, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
+                            $trace->output("suspending and unsassigning all roles: userid ".$ue->userid." ==> courseid ".$instance->courseid, 1);
                         }
                     }
-                    $rs->close();
                 }
+                $rs->close();
             }
         }
         $instances->close();
