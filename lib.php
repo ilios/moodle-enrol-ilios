@@ -532,17 +532,17 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return enrol_user_button
      * @throws \Exception
      */
-    public function get_manual_enrol_button(course_enrolment_manager $manager) {
-        $course = $manager->get_course();
-        if (!$this->can_add_new_instances($course->id)) {
-            return false;
-        }
+    // public function get_manual_enrol_button(course_enrolment_manager $manager) {
+    //     $course = $manager->get_course();
+    //     if (!$this->can_add_new_instances($course->id)) {
+    //         return false;
+    //     }
 
-        $iliosurl = new moodle_url('/enrol/ilios/edit.php', array('courseid' => $course->id));
-        $button = new enrol_user_button($iliosurl, get_string('enrol', 'enrol_ilios'), 'get');
+    //     $iliosurl = new moodle_url('/enrol/ilios/edit.php', array('courseid' => $course->id));
+    //     $button = new enrol_user_button($iliosurl, get_string('enrol', 'enrol_ilios'), 'get');
 
-        return $button;
-    }
+    //     return $button;
+    // }
 
     /**
      * Restore instance and map settings.
