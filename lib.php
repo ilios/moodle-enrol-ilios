@@ -297,6 +297,14 @@ class enrol_ilios_plugin extends enrol_plugin {
                 $trace->output(count($users) . " Ilios users found.");
 
                 foreach ($users as $user) {
+                    // Check if the given user is active in Ilios.
+                    // If not, then don't do anything here.
+                    // This will cause the enrolled users to become unenrolled further downstream,
+                    // Ilios users that are currently not enrolled will simply be ignored.
+                    if (! $user->enabled) {
+                        continue;
+                    }
+
                     // Fetch user info if not cached in $iliosusers
                     if (!isset($iliosusers[$user->id])) {
                         $iliosusers[$user->id] = null;
