@@ -286,7 +286,8 @@ class enrol_ilios_plugin extends enrol_plugin {
             if (!empty($group)) {
 
                 $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
-                $users = []; // ilios user in that group
+                $users = []; // ilios users in that group
+                $suspendEnrolments = []; // list of user enrollments to suspend
 
                 if (!empty($instance->customint2)) {
                     $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
@@ -326,6 +327,13 @@ class enrol_ilios_plugin extends enrol_plugin {
                             continue;
                         }
 
+                        // flag actively enrolled users that are disabled in ilios
+                        // for enrollment suspension further downstream
+                        if (!empty($ue) &&  ENROL_USER_ACTIVE === (int) $ue->status && !$user->enabled) {
+                            $suspendEnrolments[] = $ue;
+                            continue;
+                        }
+
                         // Continue if already enrolled with active status
                         if (!empty($ue) && ENROL_USER_ACTIVE === (int) $ue->status) {
                             continue;
@@ -339,6 +347,12 @@ class enrol_ilios_plugin extends enrol_plugin {
                             $trace->output("enrolling with " . ENROL_USER_ACTIVE . " status: userid $userid ==> courseid ".$instance->courseid, 1);
                         }
                     }
+                }
+
+                // suspend active enrollments for users that are disabled in ilios
+                foreach ($suspendEnrolments as $ue) {
+                    $trace->output("Suspending enrollment for disabled Ilios user: userid  {$ue->userid} ==> courseid {$instance->courseid}.", 1);
+                    $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
                 }
 
                 // Unenrol as necessary.
