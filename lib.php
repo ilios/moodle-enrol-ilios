@@ -286,6 +286,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             if (!empty($group)) {
 
                 $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
+                $users = []; // ilios user in that group
 
                 if (!empty($instance->customint2)) {
                     $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
