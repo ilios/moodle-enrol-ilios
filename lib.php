@@ -321,6 +321,11 @@ class enrol_ilios_plugin extends enrol_plugin {
 
                         $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
+                        // don't enroll disabled ilios users that are currently not enrolled.
+                        if (empty($ue) && !$user->enabled) {
+                            continue;
+                        }
+
                         // Continue if already enrolled with active status
                         if (!empty($ue) && ENROL_USER_ACTIVE === (int) $ue->status) {
                             continue;
