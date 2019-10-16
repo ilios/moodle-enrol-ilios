@@ -318,21 +318,20 @@ class enrol_ilios_plugin extends enrol_plugin {
                         }
                     } else {
                         $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
-                        $status = ENROL_USER_ACTIVE;
 
                         $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
                         // Continue if already enrolled with active status
-                        if (!empty($ue) && $status === (int) $ue->status) {
+                        if (!empty($ue) && ENROL_USER_ACTIVE === (int) $ue->status) {
                             continue;
                         }
 
                         // Enroll user
-                        $this->enrol_user($instance, $userid, $instance->roleid, 0, 0, $status);
-                        if (!empty($ue) && $status !== (int) $ue->status) {
-                            $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
+                        $this->enrol_user($instance, $userid, $instance->roleid, 0, 0, ENROL_USER_ACTIVE);
+                        if (!empty($ue) && ENROL_USER_ACTIVE !== (int) $ue->status) {
+                            $trace->output("changing enrollment status to '" . ENROL_USER_ACTIVE . "' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
                         } else {
-                            $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
+                            $trace->output("enrolling with " . ENROL_USER_ACTIVE . " status: userid $userid ==> courseid ".$instance->courseid, 1);
                         }
                     }
                 }
