@@ -286,6 +286,8 @@ class enrol_ilios_plugin extends enrol_plugin {
             if (!empty($group)) {
 
                 $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
+                $users = []; // ilios users in that group
+                $suspendEnrolments = []; // list of user enrollments to suspend
 
                 $users = [];
 
@@ -319,23 +321,40 @@ class enrol_ilios_plugin extends enrol_plugin {
                         }
                     } else {
                         $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
-                        $status = ENROL_USER_ACTIVE;
 
                         $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
 
+                        // don't enroll disabled ilios users that are currently not enrolled.
+                        if (empty($ue) && !$user->enabled) {
+                            continue;
+                        }
+
+                        // flag actively enrolled users that are disabled in ilios
+                        // for enrollment suspension further downstream
+                        if (!empty($ue) &&  ENROL_USER_ACTIVE === (int) $ue->status && !$user->enabled) {
+                            $suspendEnrolments[] = $ue;
+                            continue;
+                        }
+
                         // Continue if already enrolled with active status
-                        if (!empty($ue) && $status === (int) $ue->status) {
+                        if (!empty($ue) && ENROL_USER_ACTIVE === (int) $ue->status) {
                             continue;
                         }
 
                         // Enroll user
-                        $this->enrol_user($instance, $userid, $instance->roleid, 0, 0, $status);
-                        if (!empty($ue) && $status !== (int) $ue->status) {
-                            $trace->output("changing enrollment status to '{$status}' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
+                        $this->enrol_user($instance, $userid, $instance->roleid, 0, 0, ENROL_USER_ACTIVE);
+                        if (!empty($ue) && ENROL_USER_ACTIVE !== (int) $ue->status) {
+                            $trace->output("changing enrollment status to '" . ENROL_USER_ACTIVE . "' from '{$ue->status}': userid $userid ==> courseid ".$instance->courseid, 1);
                         } else {
-                            $trace->output("enrolling with $status status: userid $userid ==> courseid ".$instance->courseid, 1);
+                            $trace->output("enrolling with " . ENROL_USER_ACTIVE . " status: userid $userid ==> courseid ".$instance->courseid, 1);
                         }
                     }
+                }
+
+                // suspend active enrollments for users that are disabled in ilios
+                foreach ($suspendEnrolments as $ue) {
+                    $trace->output("Suspending enrollment for disabled Ilios user: userid  {$ue->userid} ==> courseid {$instance->courseid}.", 1);
+                    $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
                 }
 
                 // Unenrol as necessary.
