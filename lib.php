@@ -329,6 +329,11 @@ class enrol_ilios_plugin extends enrol_plugin {
                             continue;
                         }
 
+                        // don't re-enroll suspended enrollments for disabled ilios users
+                        if (!empty($ue) && ENROL_USER_SUSPENDED === (int) $ue->status && !$user->enabled) {
+                            continue;
+                        }
+
                         // flag actively enrolled users that are disabled in ilios
                         // for enrollment suspension further downstream
                         if (!empty($ue) &&  ENROL_USER_ACTIVE === (int) $ue->status && !$user->enabled) {
