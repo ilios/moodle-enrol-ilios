@@ -681,7 +681,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // Ilios API uses a plural noun, append an 's'.
         $group = $client->getbyid( $grouptype.'s', $groupid );
 
-        if ($grouptype === 'learnerGroup') {
+        if ($group && $grouptype === 'learnerGroup') {
             $group->instructors = $this->getInstructorIdsFromGroup($grouptype, $groupid);
             asort($group->instructors);
         }
