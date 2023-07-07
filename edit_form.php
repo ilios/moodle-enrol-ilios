@@ -104,32 +104,38 @@ class enrol_ilios_edit_form extends moodleform {
                 } else {
                     $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 }
-                $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
-                $grouptitle = $group->title.
-                            ' ('. count($group->children) .')';
-                $grouptitle .= ' ('. count($group->users) .')';
-                // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
-                $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
 
-                if (!empty($group->parent)) {
-                    $processparents = function ($child) use (&$processparents,
-                                                             &$learnergroupoptions,
-                                                             &$grouptitle,
-                                                             &$instance,
-                                                             $http) {
-                        $parentgroup = $http->getbyid('learnerGroups', $child->parent);
-                        $instance->learnergroupid = $parentgroup->id;
-                        $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
-                        $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
-                        if (!empty($parentgroup->parent)){
-                            $grouptitle = $parentgroup->title . ' / '. $grouptitle;
-                            $processparents($parentgroup);
-                        }
-                    };
-                    $processparents($group);
-                    $instance->subgroupid = $group->id;
-                    $instance->selectsubgroupindex = "$group->id:$group->title";
-                    $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
+                if ($group) {
+                    $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
+                    $grouptitle = $group->title.
+                        ' ('. count($group->children) .')';
+                    $grouptitle .= ' ('. count($group->users) .')';
+                    // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
+                    $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
+
+                    if (!empty($group->parent)) {
+                        $processparents = function ($child) use (&$processparents,
+                            &$learnergroupoptions,
+                            &$grouptitle,
+                            &$instance,
+                            $http) {
+                            $parentgroup = $http->getbyid('learnerGroups', $child->parent);
+                            $instance->learnergroupid = $parentgroup->id;
+                            $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
+                            $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
+                            if (!empty($parentgroup->parent)){
+                                $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                                $processparents($parentgroup);
+                            }
+                        };
+                        $processparents($group);
+                        $instance->subgroupid = $group->id;
+                        $instance->selectsubgroupindex = "$group->id:$group->title";
+                        $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
+                    }
+                } else {
+                    $instance->selectlearnergroupindex = 'learnergroupnotfound';
+                    $learnergroupoptions = array($instance->selectlearnergroupindex => "ERROR: Learnergroup not found (id=$instance->learnergroupid).");
                 }
             }
         }
