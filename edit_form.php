@@ -58,6 +58,7 @@ class enrol_ilios_edit_form extends moodleform {
         $programoptions = array('' => get_string('choosedots'));
         $cohortoptions = array('' => get_string('choosedots'));
         $learnergroupoptions = array('' => get_string('none'));
+        $hasOrphanedLearnerGroup = false;
         $subgroupoptions = array('' => get_string('none'));
         $instructorgroupoptions = array('' => get_string('none'));
 
@@ -134,8 +135,7 @@ class enrol_ilios_edit_form extends moodleform {
                         $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
                     }
                 } else {
-                    $instance->selectlearnergroupindex = 'learnergroupnotfound';
-                    $learnergroupoptions = array($instance->selectlearnergroupindex => "ERROR: Learnergroup not found (id=$instance->learnergroupid).");
+                    $hasOrphanedLearnerGroup = true;
                 }
             }
         }
@@ -202,6 +202,14 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
             $mform->registerNoSubmitButton('updatelearnergroupoptions');
             $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
+        }
+
+        if ($hasOrphanedLearnerGroup) {
+            $mform->addElement(
+                'static',
+                'orphaned_learnergroup',
+                get_string('orphanedlearnergroup', 'enrol_ilios', $instance->learnergroupid)
+            );
         }
 
         if ($instance->id) {
