@@ -50,7 +50,7 @@ $string['learner'] = 'Learner';
 $string['learnergroup'] = 'Learner group (sub-groups) (learners)';
 $string['learnergroup_help'] = 'This corresponds to the Learner groups in Ilios';
 $string['learnergroupoptionsupdate'] = 'Update learner group options';
-$string['orphanedlearnergroup'] = '<span class="alert alert-warning">Invalid current value {$a}</span>';
+$string['orphanedlearnergroup'] = '<span class="alert alert-warning">Invalid current value: {$a}</span>';
 $string['pluginname'] = 'Ilios sync';
 $string['pluginshortname'] = 'Ilios';
 $string['pluginname_desc'] = 'Ilios sync plugin synchronises members with course participants.';
