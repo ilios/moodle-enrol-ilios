@@ -68,12 +68,12 @@ class enrol_ilios_edit_form extends moodleform {
             $syncinfo = json_decode($instance->customtext1);
 
             $instance->schoolid = $syncinfo->school->id;
-            $school = $http->getbyid('schools', $instance->schoolid);
+            $school = $http->get_by_id($enrol->get_config('apikey'), 'schools', $instance->schoolid);
             $instance->selectschoolindex = "$instance->schoolid:$school->title";
             $schooloptions = array( $instance->selectschoolindex => $school->title );
 
             $instance->programid = $syncinfo->program->id;
-            $program = $http->getbyid('programs', $instance->programid);
+            $program = $http->get_by_id($enrol->get_config('apikey'), 'programs', $instance->programid);
             $instance->selectprogramindex = $instance->programid;
 
             foreach (array('shortTitle', 'title') as $attr) {
@@ -85,7 +85,7 @@ class enrol_ilios_edit_form extends moodleform {
             $programoptions = array( $instance->selectprogramindex => $program->title );
 
             $instance->cohortid = $syncinfo->cohort->id;
-            $cohort = $http->getbyid('cohorts', $instance->cohortid);
+            $cohort = $http->get_by_id($enrol->get_config('apikey'), 'cohorts', $instance->cohortid);
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
             $cohortoptions = array( $instance->selectcohortindex =>
                                     $cohort->title
@@ -102,7 +102,7 @@ class enrol_ilios_edit_form extends moodleform {
                 if (!empty($instance->customint2)) {
                     $group = $enrol->getGroupData('learnerGroup', $instance->learnergroupid);
                 } else {
-                    $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
+                    $group = $http->get_by_id($enrol->get_config('apikey'), 'learnerGroups', $instance->learnergroupid);
                 }
                 $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
                 $grouptitle = $group->title.
@@ -116,8 +116,10 @@ class enrol_ilios_edit_form extends moodleform {
                                                              &$learnergroupoptions,
                                                              &$grouptitle,
                                                              &$instance,
-                                                             $http) {
-                        $parentgroup = $http->getbyid('learnerGroups', $child->parent);
+                                                             $http,
+                                                             $enrol,
+                    ) {
+                        $parentgroup = $http->get_by_id($enrol->get_config('apikey'), 'learnerGroups', $child->parent);
                         $instance->learnergroupid = $parentgroup->id;
                         $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
                         $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
@@ -315,7 +317,7 @@ class enrol_ilios_edit_form extends moodleform {
             $learnergrouptitle = '';
         }
 
-        $schools = $http->get('schools', '', array('title' => "ASC"));
+        $schools = $http->get($enrol->get_config('apikey'), 'schools', '', array('title' => "ASC"));
 
         $prog_el =& $mform->getElement('selectschool');
         if ($schools === null) { // no connection to the server
@@ -334,6 +336,7 @@ class enrol_ilios_edit_form extends moodleform {
             $programoptions = array();
             $programs = array();
             $programs = $http->get(
+                $enrol->get_config('apikey'),
                 'programs',
                 array('school' => $sid),
                 array('title' => "ASC")
@@ -359,18 +362,24 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectcohort');
             $cohortoptions = array();
 
-            $programyears = $http->get('programYears',
-                                       array("program" => $pid),
-                                       array("startYear" => "ASC"));
+            $programyears = $http->get(
+                    $enrol->get_config('apikey'),
+                    'programYears',
+                    array("program" => $pid),
+                    array("startYear" => "ASC")
+            );
             $programyeararray = array();
             foreach ($programyears as $progyear) {
                 $programyeararray[] = $progyear->id;
             }
 
             if (!empty($programyeararray)) {
-                $cohorts = $http->get('cohorts',
-                                      array("programYear" => $programyeararray),
-                                      array("title" => "ASC"));
+                $cohorts = $http->get(
+                        $enrol->get_config('apikey'),
+                        'cohorts',
+                        array("programYear" => $programyeararray),
+                        array("title" => "ASC")
+                );
 
                 foreach ($cohorts as $cohort) {
                     $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
@@ -386,9 +395,12 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectlearnergroup');
             $learnergroupoptions = array();
 
-            $learnergroups = $http->get('learnerGroups',
-                                        array('cohort' => $cid, 'parent' => 'null'),
-                                        array('title' => "ASC"));
+            $learnergroups = $http->get(
+                    $enrol->get_config('apikey'),
+                    'learnerGroups',
+                    array('cohort' => $cid, 'parent' => 'null'),
+                    array('title' => "ASC")
+            );
             if (!empty($learnergroups)) {
                 foreach ($learnergroups as $group) {
                     $learnergroupoptions["$group->id:$group->title"] = $group->title.
@@ -404,18 +416,24 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectsubgroup');
             $subgroupoptions = array();
 
-            $subgroups = $http->get('learnerGroups',
-                                 array("parent" => $gid),
-                                 array("title" => "ASC"));
+            $subgroups = $http->get(
+                    $enrol->get_config('apikey'),
+                    'learnerGroups',
+                    array("parent" => $gid),
+                    array("title" => "ASC")
+            );
             foreach ($subgroups as $subgroup) {
                 $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                    ' ('. count($subgroup->children) .')'.
                                                                    ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
-                    $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
-                        $subgrps = $http->get('learnerGroups',
-                                              array( 'parent' => $parent->id),
-                                              array( 'title' => "ASC"));
+                    $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http, $enrol) {
+                        $subgrps = $http->get(
+                                $enrol->get_config('apikey'),
+                                'learnerGroups',
+                                array( 'parent' => $parent->id),
+                                array( 'title' => "ASC")
+                        );
                         foreach ($subgrps as $subgrp) {
                             $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                           ' ('. count($subgrp->children) .')'.

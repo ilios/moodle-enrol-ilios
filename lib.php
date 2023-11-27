@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_iliosapiclient\ilios_client;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once $CFG->libdir.'/filelib.php';
@@ -34,35 +36,13 @@ require_once $CFG->libdir.'/filelib.php';
  */
 class enrol_ilios_plugin extends enrol_plugin {
 
-    /** @var \local_iliosapiclient\ilios_client $iliosclient */
-    protected $iliosclient;
+    protected ilios_client $iliosclient;
 
     /**
      * Constructor
      */
     public function __construct() {
-        $accesstoken = new stdClass;
-        $accesstoken->token = $this->get_config('apikey');
-        $accesstoken->expires = $this->get_config('apikeyexpires');
-
-        $this->iliosclient = new \local_iliosapiclient\ilios_client($this->get_config('host_url'),
-                                              $this->get_config('userid'),
-                                              $this->get_config('secret'),
-                                              $accesstoken);
-    }
-
-    /**
-     * Updates the Ilios API token in the plugin configuration.
-     *
-     * @param \local_iliosapiclient\ilios_client $ilios_client
-     */
-    protected function save_api_token(\local_iliosapiclient\ilios_client $ilios_client) {
-        $accesstoken = $ilios_client->getAccessToken();
-        $apikey = $this->get_config('apikey');
-        if (!empty($accesstoken) && ($apikey !== $accesstoken->token)) {
-            $this->set_config('apikey', $accesstoken->token);
-            $this->set_config('apikeyexpires', $accesstoken->expires);
-        }
+        $this->iliosclient = new ilios_client($this->get_config('host_url'), new curl());
     }
 
     /**
@@ -84,7 +64,7 @@ class enrol_ilios_plugin extends enrol_plugin {
     /**
      * Returns the Ilios Client for API access
      *
-     * @return \local_iliosapiclient\ilios_client
+     * @return ilios_client
      */
     public function get_http_client() {
         return $this->iliosclient;
@@ -111,7 +91,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $syncfield = $instance->customchar1;
             $syncid = $instance->customint1;
 
-            // $groups = $this->iliosclient->getbyids($syncfield.'s', $syncid);
+            // $groups = $this->iliosclient->get_by_ids($this->get_config('apikey'), $syncfield.'s', $syncid);
 
             // if (!empty($groups)) {
             //     $group = $groups[0];
@@ -235,6 +215,8 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         require_once("$CFG->dirroot/group/lib.php");
 
+        $access_token = $this->get_config('apikey');
+
         if (!enrol_is_enabled('ilios')) {
             // Purge all roles if ilios sync disabled, those can be recreated later here by cron or CLI.
             $trace->output('Ilios enrolment sync plugin is disabled, unassigning all plugin roles and stopping.');
@@ -275,7 +257,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                 $group = $this->getGroupData($synctype, $syncid);
             } else {
                 // No need to get instructor ids.
-                $group = $http->getbyid( $synctype.'s', $syncid);
+                $group = $http->get_by_id($this->get_config('apikey'), $synctype.'s', $syncid);
             }
 
             if (empty($group)) {
@@ -293,10 +275,10 @@ class enrol_ilios_plugin extends enrol_plugin {
 
                 if (!empty($instance->customint2) && !empty($group->instructors)) {
                     $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $http->getbyids('users', $group->instructors);
+                    $users = $http->get_by_ids($this->get_config('apikey'), 'users', $group->instructors);
                 } elseif (!empty($group->users)) {
                     $trace->output("Enrolling students to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $http->getbyids('users', $group->users);
+                    $users = $http->get_by_ids($this->get_config('apikey'), 'users', $group->users);
                 }
                 $trace->output(count($users) . " Ilios users found.");
 
@@ -478,9 +460,6 @@ class enrol_ilios_plugin extends enrol_plugin {
         $rs->close();
 
         $trace->output('...user enrolment synchronisation finished.');
-
-        // cleanup
-        $this->save_api_token($http);
 
         return 0;
     }
@@ -679,7 +658,7 @@ class enrol_ilios_plugin extends enrol_plugin {
     public function getGroupData($grouptype, $groupid) {
         $client = $this->get_http_client();
         // Ilios API uses a plural noun, append an 's'.
-        $group = $client->getbyid( $grouptype.'s', $groupid );
+        $group = $client->get_by_id( $this->get_config('apikey'), $grouptype.'s', $groupid );
 
         if ($group && $grouptype === 'learnerGroup') {
             $group->instructors = $this->getInstructorIdsFromGroup($grouptype, $groupid);
@@ -701,14 +680,14 @@ class enrol_ilios_plugin extends enrol_plugin {
         $client = $this->get_http_client();
 
         // Ilios API uses a plural noun, append an 's'.
-        $group = $client->getbyid( $grouptype.'s', $groupid );
+        $group = $client->get_by_id( $this->get_config('apiclient'), $grouptype.'s', $groupid );
 
         $instructorGroupIds = array();
         $instructorIds = array();
 
         // get instructors/instructor-groups from the offerings that this learner group is being taught in.
         if (!empty($group->offerings)) {
-            $offerings = $client->getbyids('offerings', $group->offerings);
+            $offerings = $client->get_by_ids($this->get_config('apikey'), 'offerings', $group->offerings);
 
             foreach ($offerings as $offering) {
                 if (empty($offering->instructors)) {
@@ -729,7 +708,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // get instructors/instructor-groups from the ilm sessions that this learner group is being taught in.
         // (this is a rinse/repeat from offerings-related code above)
         if (!empty($group->ilmSessions)) {
-            $ilms = $client->getbyids('ilmSessions', $group->ilmSessions);
+            $ilms = $client->get_by_ids($this->get_config('apikey'), 'ilmSessions', $group->ilmSessions);
 
             foreach ($ilms as $ilm) {
                 if (empty($ilm->instructors) && empty($ilm->instructorGroups)) {
@@ -758,7 +737,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // but first.. let's de-dupe them.
         $instructorGroupIds = array_unique($instructorGroupIds);
         if (!empty($instructorGroupIds)) {
-            $instructorGroups = $client->getbyids('instructorGroups', $instructorGroupIds);
+            $instructorGroups = $client->get_by_ids($this->get_config('apikey'), 'instructorGroups', $instructorGroupIds);
             foreach ($instructorGroups as $instructorGroup) {
                 $instructorIds = array_merge($instructorIds, $instructorGroup->users);
             }
