@@ -36,13 +36,13 @@ require_once $CFG->libdir.'/filelib.php';
  */
 class enrol_ilios_plugin extends enrol_plugin {
 
-    protected ilios_client $iliosclient;
+    protected ilios_client $api_client;
 
     /**
      * Constructor
      */
     public function __construct() {
-        $this->iliosclient = new ilios_client($this->get_config('host_url'), new curl());
+        $this->api_client = new ilios_client($this->get_config('host_url'), new curl());
     }
 
     /**
@@ -66,10 +66,9 @@ class enrol_ilios_plugin extends enrol_plugin {
      *
      * @return ilios_client
      */
-    public function get_http_client() {
-        return $this->iliosclient;
+    public function get_api_client(): ilios_client {
+        return $this->api_client;
     }
-
 
     /**
      * Returns localised name of enrol instance.
@@ -214,7 +213,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         global $CFG, $DB;
         require_once $CFG->dirroot . '/group/lib.php';
 
-        $api_client = $this->get_http_client();
+        $api_client = $this->get_api_client();
         $access_token = $this->get_config('apikey');
 
         if (!enrol_is_enabled('ilios')) {
@@ -654,7 +653,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @throws \Exception
      */
     public function getGroupData($grouptype, $groupid) {
-        $api_client = $this->get_http_client();
+        $api_client = $this->get_api_client();
         $access_token = $this->get_config('apikey');
         // Ilios API uses a plural noun, append an 's'.
         $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid );
@@ -676,7 +675,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      */
     private function getInstructorIdsFromGroup($grouptype, $groupid) {
 
-        $api_client = $this->get_http_client();
+        $api_client = $this->get_api_client();
         $access_token = $this->get_config('apikey');
 
         // Ilios API uses a plural noun, append an 's'.

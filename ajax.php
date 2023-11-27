@@ -65,7 +65,7 @@ $outcome->error = '';
 
 /** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');
-$api_client = $enrol->get_http_client();
+$api_client = $enrol->get_api_client();
 $access_token = $enrol->get_config('apikey');
 
 switch ($action) {
