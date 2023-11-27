@@ -680,7 +680,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         $client = $this->get_http_client();
 
         // Ilios API uses a plural noun, append an 's'.
-        $group = $client->get_by_id( $this->get_config('apiclient'), $grouptype.'s', $groupid );
+        $group = $client->get_by_id( $this->get_config('apikey'), $grouptype.'s', $groupid );
 
         $instructorGroupIds = array();
         $instructorIds = array();
