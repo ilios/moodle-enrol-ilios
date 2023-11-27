@@ -70,7 +70,7 @@ switch ($action) {
     case 'getselectschooloptions':
         require_capability('moodle/course:enrolconfig', $context);
         $http = $enrol->get_http_client();
-        $schools = $http->get($this->get_config('apikey'), 'schools', '', array('title' => "ASC"));
+        $schools = $http->get($enrol->get_config('apikey'), 'schools', '', array('title' => "ASC"));
         $schoolarray = array();
         foreach ($schools as $school) {
             $schoolarray["$school->id:$school->title"] = $school->title;
@@ -83,7 +83,7 @@ switch ($action) {
         $sid      = required_param('filterid', PARAM_INT); // school id
         $http = $enrol->get_http_client();
         $programs = array();
-        $programs = $http->get($this->get_config('apikey'), 'programs', array('school' => $sid), array('title' => "ASC"));
+        $programs = $http->get($enrol->get_config('apikey'), 'programs', array('school' => $sid), array('title' => "ASC"));
         $programarray = array();
         foreach ($programs as $program) {
             $key = $program->id;
@@ -103,7 +103,7 @@ switch ($action) {
         $pid    = required_param('filterid', PARAM_INT);
         $http = $enrol->get_http_client();
         $programyears = $http->get(
-                $this->get_config('apikey'),
+                $enrol->get_config('apikey'),
                 'programYears',
                 array("program" => $pid),
                 array("startYear" => "ASC")
@@ -115,7 +115,7 @@ switch ($action) {
         }
 
         if (!empty($programyeararray)) {
-            $cohorts = $http->get($this->get_config('apikey'),
+            $cohorts = $http->get($enrol->get_config('apikey'),
                     'cohorts',
                     array("programYear" => $programyeararray),
                     array("title" => "ASC")
@@ -135,7 +135,7 @@ switch ($action) {
         $usertype = optional_param('usertype', 0, PARAM_INT); // learner or instructor
         $http = $enrol->get_http_client();
         $learnergroups = $http->get(
-                $this->get_config('apikey'),
+                $enrol->get_config('apikey'),
                 'learnerGroups',
                 array('cohort' => $cid, 'parent' => 'null'),
                 array('title'=> "ASC")
@@ -156,7 +156,7 @@ switch ($action) {
         $subgroupoptions = array();
         $http = $enrol->get_http_client();
         $subgroups = $http->get(
-                $this->get_config('apikey'),
+                $enrol->get_config('apikey'),
                 'learnerGroups',
                 array("parent" => $gid),
                 array("title" => "ASC")
@@ -169,7 +169,7 @@ switch ($action) {
             if (!empty($subgroup->children)) {
                 $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
                     $subgrps = $http->get(
-                            $this->get_config('apikey'),
+                            $enrol->get_config('apikey'),
                             'learnerGroups',
                             array( 'parent' => $parent->id),
                             array( 'title' => "ASC")
@@ -195,7 +195,7 @@ switch ($action) {
         $gid      = required_param('filterid', PARAM_INT); // group id
         $instructorgroupoptions = array();
         $http = $enrol->get_http_client();
-        $learnergroup = $http->get_by_id($this->get_config('apikey'), 'learnerGroups', $gid);
+        $learnergroup = $http->get_by_id($enrol->get_config('apikey'), 'learnerGroups', $gid);
         if (!empty($learnergroup->instructorGroups)) {
             $instructorgroups = $http->get('instructorGroups',
                                            // array("id" => $learnergroup->instructorGroups),
