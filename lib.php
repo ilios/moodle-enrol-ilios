@@ -38,6 +38,8 @@ class enrol_ilios_plugin extends enrol_plugin {
 
     protected ilios_client $api_client;
 
+    public const SETTINGS_API_ACCESS_TOKEN = 'apikey';
+
     /**
      * Constructor
      */
@@ -71,6 +73,14 @@ class enrol_ilios_plugin extends enrol_plugin {
     }
 
     /**
+     * Retrieves the Ilios API access token from the plugin configuration.
+     * @return string
+     */
+    public function get_api_access_token(): string {
+        return $this->get_config(self::SETTINGS_API_ACCESS_TOKEN, '');
+    }
+
+    /**
      * Returns localised name of enrol instance.
      *
      * @param stdClass $instance (null is accepted too)
@@ -90,7 +100,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $syncfield = $instance->customchar1;
             $syncid = $instance->customint1;
 
-            // $groups = $this->iliosclient->get_by_ids($this->get_config('apikey'), $syncfield.'s', $syncid);
+            // $groups = $this->iliosclient->get_by_ids($this->get_api_access_token(), $syncfield.'s', $syncid);
 
             // if (!empty($groups)) {
             //     $group = $groups[0];
@@ -214,7 +224,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         require_once $CFG->dirroot . '/group/lib.php';
 
         $api_client = $this->get_api_client();
-        $access_token = $this->get_config('apikey');
+        $access_token = $this->get_api_access_token();
 
         if (!enrol_is_enabled('ilios')) {
             // Purge all roles if ilios sync disabled, those can be recreated later here by cron or CLI.
@@ -654,7 +664,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      */
     public function getGroupData($grouptype, $groupid) {
         $api_client = $this->get_api_client();
-        $access_token = $this->get_config('apikey');
+        $access_token = $this->get_api_access_token();
         // Ilios API uses a plural noun, append an 's'.
         $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid );
 
@@ -676,7 +686,7 @@ class enrol_ilios_plugin extends enrol_plugin {
     private function getInstructorIdsFromGroup($grouptype, $groupid) {
 
         $api_client = $this->get_api_client();
-        $access_token = $this->get_config('apikey');
+        $access_token = $this->get_api_access_token();
 
         // Ilios API uses a plural noun, append an 's'.
         $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid);

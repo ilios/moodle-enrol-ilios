@@ -34,6 +34,7 @@ class enrol_ilios_edit_form extends moodleform {
         global $CFG, $DB, $PAGE;
 
         $mform  = $this->_form;
+        /** @var enrol_ilios_plugin $plugin */
         list($instance, $plugin, $course) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
@@ -42,7 +43,7 @@ class enrol_ilios_edit_form extends moodleform {
 
         $enrol = $plugin;
         $api_client  = $plugin->get_api_client();
-        $access_token = $plugin->get_config('apikey');
+        $access_token = $plugin->get_api_access_token();
 
         $mform->addElement('header','general', get_string('pluginname', 'enrol_ilios'));
 
@@ -270,9 +271,10 @@ class enrol_ilios_edit_form extends moodleform {
             return;
         }
 
+        /** @var enrol_ilios_plugin $enrol */
         $enrol = enrol_get_plugin('ilios');
         $api_client = $enrol->get_api_client();
-        $access_token = $enrol->get_config('apikey');
+        $access_token = $enrol->get_api_access_token();
 
         $selectvalues = $mform->getElementValue('selectschool');
         if (is_array($selectvalues)) {
