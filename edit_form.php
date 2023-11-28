@@ -58,6 +58,7 @@ class enrol_ilios_edit_form extends moodleform {
         $programoptions = array('' => get_string('choosedots'));
         $cohortoptions = array('' => get_string('choosedots'));
         $learnergroupoptions = array('' => get_string('none'));
+        $hasOrphanedLearnerGroup = false;
         $subgroupoptions = array('' => get_string('none'));
         $instructorgroupoptions = array('' => get_string('none'));
 
@@ -104,32 +105,37 @@ class enrol_ilios_edit_form extends moodleform {
                 } else {
                     $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
                 }
-                $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
-                $grouptitle = $group->title.
-                            ' ('. count($group->children) .')';
-                $grouptitle .= ' ('. count($group->users) .')';
-                // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
-                $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
 
-                if (!empty($group->parent)) {
-                    $processparents = function ($child) use (&$processparents,
-                                                             &$learnergroupoptions,
-                                                             &$grouptitle,
-                                                             &$instance,
-                                                             $http) {
-                        $parentgroup = $http->getbyid('learnerGroups', $child->parent);
-                        $instance->learnergroupid = $parentgroup->id;
-                        $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
-                        $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
-                        if (!empty($parentgroup->parent)){
-                            $grouptitle = $parentgroup->title . ' / '. $grouptitle;
-                            $processparents($parentgroup);
-                        }
-                    };
-                    $processparents($group);
-                    $instance->subgroupid = $group->id;
-                    $instance->selectsubgroupindex = "$group->id:$group->title";
-                    $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
+                if ($group) {
+                    $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
+                    $grouptitle = $group->title.
+                        ' ('. count($group->children) .')';
+                    $grouptitle .= ' ('. count($group->users) .')';
+                    // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
+                    $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
+
+                    if (!empty($group->parent)) {
+                        $processparents = function ($child) use (&$processparents,
+                            &$learnergroupoptions,
+                            &$grouptitle,
+                            &$instance,
+                            $http) {
+                            $parentgroup = $http->getbyid('learnerGroups', $child->parent);
+                            $instance->learnergroupid = $parentgroup->id;
+                            $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
+                            $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
+                            if (!empty($parentgroup->parent)){
+                                $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                                $processparents($parentgroup);
+                            }
+                        };
+                        $processparents($group);
+                        $instance->subgroupid = $group->id;
+                        $instance->selectsubgroupindex = "$group->id:$group->title";
+                        $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
+                    }
+                } else {
+                    $hasOrphanedLearnerGroup = true;
                 }
             }
         }
@@ -196,6 +202,14 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
             $mform->registerNoSubmitButton('updatelearnergroupoptions');
             $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
+        }
+
+        if ($hasOrphanedLearnerGroup) {
+            $mform->addElement(
+                'static',
+                'orphaned_learnergroup',
+                get_string('orphanedlearnergroup', 'enrol_ilios', $instance->learnergroupid)
+            );
         }
 
         if ($instance->id) {
