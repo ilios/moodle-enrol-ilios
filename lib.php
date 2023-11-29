@@ -44,7 +44,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * Constructor
      */
     public function __construct() {
-        $this->api_client = new ilios_client($this->get_config('host_url'), new curl());
+        $this->api_client = new ilios_client($this->get_config('host_url', ''), new curl());
     }
 
     /**
