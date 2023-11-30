@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_iliosapiclient\ilios_client;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once $CFG->libdir.'/filelib.php';
@@ -34,35 +36,15 @@ require_once $CFG->libdir.'/filelib.php';
  */
 class enrol_ilios_plugin extends enrol_plugin {
 
-    /** @var \local_iliosapiclient\ilios_client $iliosclient */
-    protected $iliosclient;
+    protected ilios_client $api_client;
+
+    public const SETTINGS_API_ACCESS_TOKEN = 'apikey';
 
     /**
      * Constructor
      */
     public function __construct() {
-        $accesstoken = new stdClass;
-        $accesstoken->token = $this->get_config('apikey');
-        $accesstoken->expires = $this->get_config('apikeyexpires');
-
-        $this->iliosclient = new \local_iliosapiclient\ilios_client($this->get_config('host_url'),
-                                              $this->get_config('userid'),
-                                              $this->get_config('secret'),
-                                              $accesstoken);
-    }
-
-    /**
-     * Updates the Ilios API token in the plugin configuration.
-     *
-     * @param \local_iliosapiclient\ilios_client $ilios_client
-     */
-    protected function save_api_token(\local_iliosapiclient\ilios_client $ilios_client) {
-        $accesstoken = $ilios_client->getAccessToken();
-        $apikey = $this->get_config('apikey');
-        if (!empty($accesstoken) && ($apikey !== $accesstoken->token)) {
-            $this->set_config('apikey', $accesstoken->token);
-            $this->set_config('apikeyexpires', $accesstoken->expires);
-        }
+        $this->api_client = new ilios_client($this->get_config('host_url', ''), new curl());
     }
 
     /**
@@ -84,12 +66,19 @@ class enrol_ilios_plugin extends enrol_plugin {
     /**
      * Returns the Ilios Client for API access
      *
-     * @return \local_iliosapiclient\ilios_client
+     * @return ilios_client
      */
-    public function get_http_client() {
-        return $this->iliosclient;
+    public function get_api_client(): ilios_client {
+        return $this->api_client;
     }
 
+    /**
+     * Retrieves the Ilios API access token from the plugin configuration.
+     * @return string
+     */
+    public function get_api_access_token(): string {
+        return $this->get_config(self::SETTINGS_API_ACCESS_TOKEN, '');
+    }
 
     /**
      * Returns localised name of enrol instance.
@@ -111,7 +100,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $syncfield = $instance->customchar1;
             $syncid = $instance->customint1;
 
-            // $groups = $this->iliosclient->getbyids($syncfield.'s', $syncid);
+            // $groups = $this->iliosclient->get_by_ids($this->get_api_access_token(), $syncfield.'s', $syncid);
 
             // if (!empty($groups)) {
             //     $group = $groups[0];
@@ -232,8 +221,10 @@ class enrol_ilios_plugin extends enrol_plugin {
      */
     public function sync($trace, $courseid = NULL) {
         global $CFG, $DB;
+        require_once $CFG->dirroot . '/group/lib.php';
 
-        require_once("$CFG->dirroot/group/lib.php");
+        $api_client = $this->get_api_client();
+        $access_token = $this->get_api_access_token();
 
         if (!enrol_is_enabled('ilios')) {
             // Purge all roles if ilios sync disabled, those can be recreated later here by cron or CLI.
@@ -250,8 +241,6 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         $allroles = get_all_roles();
         $iliosusers = array(); // cache user data
-
-        $http  = $this->get_http_client();
 
         $unenrolaction = $this->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
 
@@ -275,7 +264,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                 $group = $this->getGroupData($synctype, $syncid);
             } else {
                 // No need to get instructor ids.
-                $group = $http->getbyid( $synctype.'s', $syncid);
+                $group = $api_client->get_by_id($access_token, $synctype.'s', $syncid);
             }
 
             if (empty($group)) {
@@ -293,10 +282,10 @@ class enrol_ilios_plugin extends enrol_plugin {
 
                 if (!empty($instance->customint2) && !empty($group->instructors)) {
                     $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $http->getbyids('users', $group->instructors);
+                    $users = $api_client->get_by_ids($access_token, 'users', $group->instructors);
                 } elseif (!empty($group->users)) {
                     $trace->output("Enrolling students to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $http->getbyids('users', $group->users);
+                    $users = $api_client->get_by_ids($access_token, 'users', $group->users);
                 }
                 $trace->output(count($users) . " Ilios users found.");
 
@@ -478,9 +467,6 @@ class enrol_ilios_plugin extends enrol_plugin {
         $rs->close();
 
         $trace->output('...user enrolment synchronisation finished.');
-
-        // cleanup
-        $this->save_api_token($http);
 
         return 0;
     }
@@ -677,9 +663,10 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @throws \Exception
      */
     public function getGroupData($grouptype, $groupid) {
-        $client = $this->get_http_client();
+        $api_client = $this->get_api_client();
+        $access_token = $this->get_api_access_token();
         // Ilios API uses a plural noun, append an 's'.
-        $group = $client->getbyid( $grouptype.'s', $groupid );
+        $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid );
 
         if ($group && $grouptype === 'learnerGroup') {
             $group->instructors = $this->getInstructorIdsFromGroup($grouptype, $groupid);
@@ -696,19 +683,20 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return array
      * @throws moodle_exception
      */
-    private function getInstructorIdsFromGroup( $grouptype, $groupid ) {
+    private function getInstructorIdsFromGroup($grouptype, $groupid) {
 
-        $client = $this->get_http_client();
+        $api_client = $this->get_api_client();
+        $access_token = $this->get_api_access_token();
 
         // Ilios API uses a plural noun, append an 's'.
-        $group = $client->getbyid( $grouptype.'s', $groupid );
+        $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid);
 
         $instructorGroupIds = array();
         $instructorIds = array();
 
         // get instructors/instructor-groups from the offerings that this learner group is being taught in.
         if (!empty($group->offerings)) {
-            $offerings = $client->getbyids('offerings', $group->offerings);
+            $offerings = $api_client->get_by_ids($access_token, 'offerings', $group->offerings);
 
             foreach ($offerings as $offering) {
                 if (empty($offering->instructors)) {
@@ -729,7 +717,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // get instructors/instructor-groups from the ilm sessions that this learner group is being taught in.
         // (this is a rinse/repeat from offerings-related code above)
         if (!empty($group->ilmSessions)) {
-            $ilms = $client->getbyids('ilmSessions', $group->ilmSessions);
+            $ilms = $api_client->get_by_ids($access_token, 'ilmSessions', $group->ilmSessions);
 
             foreach ($ilms as $ilm) {
                 if (empty($ilm->instructors) && empty($ilm->instructorGroups)) {
@@ -758,7 +746,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // but first.. let's de-dupe them.
         $instructorGroupIds = array_unique($instructorGroupIds);
         if (!empty($instructorGroupIds)) {
-            $instructorGroups = $client->getbyids('instructorGroups', $instructorGroupIds);
+            $instructorGroups = $api_client->get_by_ids($access_token, 'instructorGroups', $instructorGroupIds);
             foreach ($instructorGroups as $instructorGroup) {
                 $instructorIds = array_merge($instructorIds, $instructorGroup->users);
             }
