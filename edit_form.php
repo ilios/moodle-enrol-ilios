@@ -34,6 +34,7 @@ class enrol_ilios_edit_form extends moodleform {
         global $CFG, $DB, $PAGE;
 
         $mform  = $this->_form;
+        /** @var enrol_ilios_plugin $plugin */
         list($instance, $plugin, $course) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
@@ -41,7 +42,8 @@ class enrol_ilios_edit_form extends moodleform {
                                     array(array('formid' => $mform->getAttribute('id'), 'courseid' => $course->id)));
 
         $enrol = $plugin;
-        $http  = $plugin->get_http_client();
+        $api_client = $plugin->get_api_client();
+        $access_token = $plugin->get_api_access_token();
 
         $mform->addElement('header','general', get_string('pluginname', 'enrol_ilios'));
 
@@ -69,12 +71,12 @@ class enrol_ilios_edit_form extends moodleform {
             $syncinfo = json_decode($instance->customtext1);
 
             $instance->schoolid = $syncinfo->school->id;
-            $school = $http->getbyid('schools', $instance->schoolid);
+            $school = $api_client->get_by_id($access_token, 'schools', $instance->schoolid);
             $instance->selectschoolindex = "$instance->schoolid:$school->title";
             $schooloptions = array( $instance->selectschoolindex => $school->title );
 
             $instance->programid = $syncinfo->program->id;
-            $program = $http->getbyid('programs', $instance->programid);
+            $program = $api_client->get_by_id($access_token, 'programs', $instance->programid);
             $instance->selectprogramindex = $instance->programid;
 
             foreach (array('shortTitle', 'title') as $attr) {
@@ -86,7 +88,7 @@ class enrol_ilios_edit_form extends moodleform {
             $programoptions = array( $instance->selectprogramindex => $program->title );
 
             $instance->cohortid = $syncinfo->cohort->id;
-            $cohort = $http->getbyid('cohorts', $instance->cohortid);
+            $cohort = $api_client->get_by_id($access_token, 'cohorts', $instance->cohortid);
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
             $cohortoptions = array( $instance->selectcohortindex =>
                                     $cohort->title
@@ -103,7 +105,7 @@ class enrol_ilios_edit_form extends moodleform {
                 if (!empty($instance->customint2)) {
                     $group = $enrol->getGroupData('learnerGroup', $instance->learnergroupid);
                 } else {
-                    $group = $http->getbyid('learnerGroups', $instance->learnergroupid);
+                    $group = $api_client->get_by_id($access_token, 'learnerGroups', $instance->learnergroupid);
                 }
 
                 if ($group) {
@@ -119,8 +121,10 @@ class enrol_ilios_edit_form extends moodleform {
                             &$learnergroupoptions,
                             &$grouptitle,
                             &$instance,
-                            $http) {
-                            $parentgroup = $http->getbyid('learnerGroups', $child->parent);
+                            $api_client,
+                            $access_token
+                        ) {
+                            $parentgroup = $api_client->get_by_id($access_token, 'learnerGroups', $child->parent);
                             $instance->learnergroupid = $parentgroup->id;
                             $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
                             $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
@@ -281,8 +285,10 @@ class enrol_ilios_edit_form extends moodleform {
             return;
         }
 
+        /** @var enrol_ilios_plugin $enrol */
         $enrol = enrol_get_plugin('ilios');
-        $http = $enrol->get_http_client();
+        $api_client = $enrol->get_api_client();
+        $access_token = $enrol->get_api_access_token();
 
         $selectvalues = $mform->getElementValue('selectschool');
         if (is_array($selectvalues)) {
@@ -329,7 +335,7 @@ class enrol_ilios_edit_form extends moodleform {
             $learnergrouptitle = '';
         }
 
-        $schools = $http->get('schools', '', array('title' => "ASC"));
+        $schools = $api_client->get($access_token, 'schools', '', array('title' => "ASC"));
 
         $prog_el =& $mform->getElement('selectschool');
         if ($schools === null) { // no connection to the server
@@ -347,10 +353,11 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectprogram');
             $programoptions = array();
             $programs = array();
-            $programs = $http->get(
-                'programs',
-                array('school' => $sid),
-                array('title' => "ASC")
+            $programs = $api_client->get(
+                    $access_token,
+                    'programs',
+                    array('school' => $sid),
+                    array('title' => "ASC")
             );
 
             if (!empty($programs)) {
@@ -373,18 +380,23 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectcohort');
             $cohortoptions = array();
 
-            $programyears = $http->get('programYears',
-                                       array("program" => $pid),
-                                       array("startYear" => "ASC"));
+            $programyears = $api_client->get(
+                    $access_token,
+                    'programYears',
+                    array("program" => $pid),
+                    array("startYear" => "ASC"));
             $programyeararray = array();
             foreach ($programyears as $progyear) {
                 $programyeararray[] = $progyear->id;
             }
 
             if (!empty($programyeararray)) {
-                $cohorts = $http->get('cohorts',
-                                      array("programYear" => $programyeararray),
-                                      array("title" => "ASC"));
+                $cohorts = $api_client->get(
+                        $access_token,
+                        'cohorts',
+                        array("programYear" => $programyeararray),
+                        array("title" => "ASC")
+                );
 
                 foreach ($cohorts as $cohort) {
                     $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
@@ -400,9 +412,12 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectlearnergroup');
             $learnergroupoptions = array();
 
-            $learnergroups = $http->get('learnerGroups',
-                                        array('cohort' => $cid, 'parent' => 'null'),
-                                        array('title' => "ASC"));
+            $learnergroups = $api_client->get(
+                    $access_token,
+                    'learnerGroups',
+                    array('cohort' => $cid, 'parent' => 'null'),
+                    array('title' => "ASC")
+            );
             if (!empty($learnergroups)) {
                 foreach ($learnergroups as $group) {
                     $learnergroupoptions["$group->id:$group->title"] = $group->title.
@@ -418,18 +433,24 @@ class enrol_ilios_edit_form extends moodleform {
             $prog_el =& $mform->getElement('selectsubgroup');
             $subgroupoptions = array();
 
-            $subgroups = $http->get('learnerGroups',
-                                 array("parent" => $gid),
-                                 array("title" => "ASC"));
+            $subgroups = $api_client->get(
+                    $access_token,
+                    'learnerGroups',
+                    array("parent" => $gid),
+                    array("title" => "ASC")
+            );
             foreach ($subgroups as $subgroup) {
                 $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                    ' ('. count($subgroup->children) .')'.
                                                                    ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
-                    $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions,$http) {
-                        $subgrps = $http->get('learnerGroups',
-                                              array( 'parent' => $parent->id),
-                                              array( 'title' => "ASC"));
+                    $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $api_client, $access_token) {
+                        $subgrps = $api_client->get(
+                                $access_token,
+                                'learnerGroups',
+                                array( 'parent' => $parent->id),
+                                array( 'title' => "ASC")
+                        );
                         foreach ($subgrps as $subgrp) {
                             $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                           ' ('. count($subgrp->children) .')'.
