@@ -1,23 +1,19 @@
-# moodle-enrol-ilios
-A Moodle Enrollment plugin for the Ilios Curriculum Management system.
+A Moodle Enrollment plugin for the [Ilios Curriculum Management platform](https://iliosproject.org/).
 
 # Installation
 
-## Prerequisites
+## Install dependencies
 
 This plugin has a dependency on the [Ilios API client plugin](https://github.com/ilios/local_iliosapiclient).
 Please install that plugin first, see its README file for instructions.
 
-## Install with git
-* use a command line interface of your choice on the destination system (server with moodle installation)
-* switch to the moodle enrol folder: `cd /path/to/moodle/enrol/`
-* `git clone https://github.com/ilios/moodle-enrol-ilios.git ilios`
-* navigate on your moodle page to admin --> notifications and follow the instructions
+## Install this plugin
 
-## Install from zip
-* download zip file from github: https://github.com/ilios/moodle-enrol-ilios/archive/master.zip
-* unpack zip file to `/path/to/moodle/enrol/`
-* rename directory `moodle-enrol-ilios` to `ilios`
-* navigate on your moodle page to admin --> notifications and follow the instructions
+* Download/extract or clone https://github.com/ilios/moodle-enrol-ilios.git to the `/enrol` directory in your Moodle installation.
+* Rename the `moodle-enrol-ilios` directory to `ilios`.
 
-Copyright (c) 2017 The Regents of the University of California.
+# Copyright and License
+
+This is Open Source Software, published under the GPL v3.
+
+Copyright (c) The Regents of the University of California.
