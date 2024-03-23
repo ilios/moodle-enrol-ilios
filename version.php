@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Ilios enrolment plugin version specification.
+ * Ilios enrolment plugin version file.
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
@@ -25,9 +25,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2023112700;        // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2022111800;        // Requires this Moodle version
+$plugin->version   = 2024032200;       // The current plugin version (Date: YYYYMMDDXX)
+$plugin->requires  = 2023100400;       // Requires this Moodle version
 $plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
+$plugin->release = 'v4.3';
+$plugin->supported = [403, 403];
+$plugin->maturity = MATURITY_STABLE;
 $plugin->dependencies = array(
-    'local_iliosapiclient' => 2023112200,
+    'local_iliosapiclient' => 2024032200,
 );
