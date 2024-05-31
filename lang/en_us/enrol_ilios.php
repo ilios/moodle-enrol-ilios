@@ -54,6 +54,7 @@ $string['orphanedlearnergroup'] = '<span class="alert alert-warning">Invalid cur
 $string['pluginname'] = 'Ilios sync';
 $string['pluginname_desc'] = 'Ilios sync plugin synchronises members with course participants.';
 $string['pluginshortname'] = 'Ilios';
+$string['privacy:metadata'] = 'The Ilios enrollment plugin does not store any personal data.';
 $string['program'] = 'Program';
 $string['program_help'] = 'This corresponds to the Programs in Ilios.';
 $string['programoptionsupdate'] = 'Update program options';

@@ -15,22 +15,30 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Ilios enrolment plugin version file.
+ * Privacy Subsystem implementation for enrol_ilios.
  *
  * @package    enrol_ilios
- * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+namespace enrol_ilios\privacy;
+use core_privacy\local\metadata\null_provider;
 
-defined('MOODLE_INTERNAL') || die();
-
-$plugin->version   = 2024053100;       // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2023100400;       // Requires this Moodle version
-$plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
-$plugin->release = 'v4.3';
-$plugin->supported = [403, 403];
-$plugin->maturity = MATURITY_STABLE;
-$plugin->dependencies = array(
-    'local_iliosapiclient' => 2024032200,
-);
+/**
+ * Privacy Subsystem for enrol_ilios implementing null_provider.
+ *
+ * @package    enrol_ilios
+ * @copyright  The Regents of the University of California
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class provider implements null_provider {
+    /**
+     * Get the language string identifier with the component's language
+     * file to explain why this plugin stores no data.
+     *
+     * @return  string
+     */
+    public static function get_reason(): string {
+        return 'privacy:metadata';
+    }
+}
