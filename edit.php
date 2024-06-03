@@ -30,17 +30,17 @@ require_once("$CFG->dirroot/group/lib.php");
 $courseid = required_param('courseid', PARAM_INT);
 $instanceid = optional_param('id', 0, PARAM_INT);
 
-$course = $DB->get_record('course', array('id'=>$courseid), '*', MUST_EXIST);
+$course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
 $context = context_course::instance($course->id, MUST_EXIST);
 
 require_login($course);
 require_capability('moodle/course:enrolconfig', $context);
 require_capability('enrol/ilios:config', $context);
 
-$PAGE->set_url('/enrol/ilios/edit.php', array('courseid'=>$course->id, 'id'=>$instanceid));
+$PAGE->set_url('/enrol/ilios/edit.php', ['courseid' => $course->id, 'id' => $instanceid]);
 $PAGE->set_pagelayout('admin');
 
-$returnurl = new moodle_url('/enrol/instances.php', array('id'=>$course->id));
+$returnurl = new moodle_url('/enrol/instances.php', ['id' => $course->id]);
 if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
 }
@@ -49,14 +49,14 @@ if (!enrol_is_enabled('ilios')) {
 $enrol = enrol_get_plugin('ilios');
 
 if ($instanceid) {
-    $instance = $DB->get_record('enrol', array('courseid'=>$course->id, 'enrol'=>'ilios', 'id'=>$instanceid), '*', MUST_EXIST);
+    $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios', 'id' => $instanceid], '*', MUST_EXIST);
 
 } else {
     // No instance yet, we have to add new instance.
     if (!$enrol->get_newinstance_link($course->id)) {
         redirect($returnurl);
     }
-    navigation_node::override_active_url(new moodle_url('/enrol/instances.php', array('id'=>$course->id)));
+    navigation_node::override_active_url(new moodle_url('/enrol/instances.php', ['id' => $course->id]));
     $instance = new stdClass();
     $instance->id          = null;
     $instance->courseid    = $course->id;
@@ -74,7 +74,7 @@ if ($courseadmin && $courseadmin->get('users') && $courseadmin->get('users')->ge
     $courseadmin->get('users')->get('manageinstances')->make_active();
 }
 
-$mform = new enrol_ilios_edit_form(null, array($instance, $enrol, $course));
+$mform = new enrol_ilios_edit_form(null, [$instance, $enrol, $course]);
 
 if ($mform->is_cancelled()) {
     redirect($returnurl);
@@ -83,18 +83,18 @@ if ($mform->is_cancelled()) {
     // We are here only because the form is submitted.
     $synctype = '';
     $syncid = '';
-    $syncinfo = array();
+    $syncinfo = [];
 
     $selectvalue = isset($data->selectschool) ? $data->selectschool : '';
     if (!empty($selectvalue)) {
         list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
-        $syncinfo["school"] = array("id" => $schoolid, "title" => $schooltitle);
+        $syncinfo["school"] = ["id" => $schoolid, "title" => $schooltitle];
     }
 
     $selectvalue = isset($data->selectprogram) ? $data->selectprogram : '';
     if (!empty($selectvalue)) {
         list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
-        $syncinfo["program"] = array("id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle);
+        $syncinfo["program"] = ["id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle];
     }
 
     $selectvalue = isset($data->selectcohort) ? $data->selectcohort : '';
@@ -102,7 +102,7 @@ if ($mform->is_cancelled()) {
         list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
         $synctype = 'cohort';
         $syncid = $cohortid;
-        $syncinfo["cohort"] = array("id" => $cohortid, "title" => $cohorttitle);
+        $syncinfo["cohort"] = ["id" => $cohortid, "title" => $cohorttitle];
     }
 
     $selectvalue = isset($data->selectlearnergroup) ? $data->selectlearnergroup : '';
@@ -110,7 +110,7 @@ if ($mform->is_cancelled()) {
         list($learnergroupid, $learnergrouptitle) = explode( ":", $selectvalue, 2);
         $synctype = 'learnerGroup';
         $syncid = $learnergroupid;
-        $syncinfo["learnerGroup"] = array( "id" => $learnergroupid, "title" => $learnergrouptitle );
+        $syncinfo["learnerGroup"] = [ "id" => $learnergroupid, "title" => $learnergrouptitle ];
     }
 
     $selectvalue = isset($data->selectsubgroup) ? $data->selectsubgroup : '';
@@ -118,14 +118,14 @@ if ($mform->is_cancelled()) {
         list($subgroupid, $subgrouptitle) = explode( ":", $selectvalue, 2);
         $synctype = 'learnerGroup';
         $syncid = $subgroupid;
-        $syncinfo["subGroup"] = array( "id" => $subgroupid, "title" => $subgrouptitle );
+        $syncinfo["subGroup"] = [ "id" => $subgroupid, "title" => $subgrouptitle ];
     }
 
     if ($data->id) {
         // NOTE: no cohort or learner group changes here!!!
         if ($data->roleid != $instance->roleid) {
             // The sync script can only add roles, for perf reasons it does not modify them.
-            role_unassign_all(array('contextid'=>$context->id, 'roleid'=>$instance->roleid, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
+            role_unassign_all(['contextid' => $context->id, 'roleid' => $instance->roleid, 'component' => 'enrol_ilios', 'itemid' => $instance->id]);
         }
 
         $instance->name         = $data->name;
@@ -140,13 +140,13 @@ if ($mform->is_cancelled()) {
 
         $DB->update_record('enrol', $instance);
     } else {
-        $enrol->add_instance($course, array('name'=>$data->name, 'status'=>$data->status,
-                                            'customchar1'=>$synctype,
-                                            'customint1'=>$syncid,
-                                            'customtext1'=>json_encode($syncinfo),
-                                            'roleid'=>$data->roleid,
-                                            'customint2'=>$data->selectusertype,
-                                            'customint6'=>$data->customint6));
+        $enrol->add_instance($course, ['name' => $data->name, 'status' => $data->status,
+                                            'customchar1' => $synctype,
+                                            'customint1' => $syncid,
+                                            'customtext1' => json_encode($syncinfo),
+                                            'roleid' => $data->roleid,
+                                            'customint2' => $data->selectusertype,
+                                            'customint6' => $data->customint6]);
     }
 
     $trace = new null_progress_trace();

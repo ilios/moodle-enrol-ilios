@@ -39,30 +39,29 @@ class enrol_ilios_edit_form extends moodleform {
         $coursecontext = context_course::instance($course->id);
 
         $PAGE->requires->yui_module('moodle-enrol_ilios-groupchoosers', 'M.enrol_ilios.init_groupchoosers',
-                                    array(array('formid' => $mform->getAttribute('id'), 'courseid' => $course->id)));
+                                    [['formid' => $mform->getAttribute('id'), 'courseid' => $course->id]]);
 
         $enrol = $plugin;
-        $api_client = $plugin->get_api_client();
-        $access_token = $plugin->get_api_access_token();
+        $apiclient = $plugin->get_api_client();
+        $accesstoken = $plugin->get_api_access_token();
 
-        $mform->addElement('header','general', get_string('pluginname', 'enrol_ilios'));
+        $mform->addElement('header', 'general', get_string('pluginname', 'enrol_ilios'));
 
         $mform->addElement('text', 'name', get_string('custominstancename', 'enrol'));
         $mform->setType('name', PARAM_TEXT);
 
-        $options = array(ENROL_INSTANCE_ENABLED  => get_string('yes'),
-                         ENROL_INSTANCE_DISABLED => get_string('no'));
+        $options = [ENROL_INSTANCE_ENABLED  => get_string('yes'),
+                         ENROL_INSTANCE_DISABLED => get_string('no')];
         $mform->addElement('select', 'status', get_string('status', 'enrol_ilios'), $options);
 
-
-        $usertypes = array(get_string('learner', 'enrol_ilios'), get_string('instructor', 'enrol_ilios'));
-        $schooloptions = array('' => get_string('choosedots'));
-        $programoptions = array('' => get_string('choosedots'));
-        $cohortoptions = array('' => get_string('choosedots'));
-        $learnergroupoptions = array('' => get_string('none'));
-        $hasOrphanedLearnerGroup = false;
-        $subgroupoptions = array('' => get_string('none'));
-        $instructorgroupoptions = array('' => get_string('none'));
+        $usertypes = [get_string('learner', 'enrol_ilios'), get_string('instructor', 'enrol_ilios')];
+        $schooloptions = ['' => get_string('choosedots')];
+        $programoptions = ['' => get_string('choosedots')];
+        $cohortoptions = ['' => get_string('choosedots')];
+        $learnergroupoptions = ['' => get_string('none')];
+        $hasorphanedlearnergroup = false;
+        $subgroupoptions = ['' => get_string('none')];
+        $instructorgroupoptions = ['' => get_string('none')];
 
         if ($instance->id) {
             $synctype = $instance->customchar1;
@@ -71,29 +70,29 @@ class enrol_ilios_edit_form extends moodleform {
             $syncinfo = json_decode($instance->customtext1);
 
             $instance->schoolid = $syncinfo->school->id;
-            $school = $api_client->get_by_id($access_token, 'schools', $instance->schoolid);
+            $school = $apiclient->get_by_id($accesstoken, 'schools', $instance->schoolid);
             $instance->selectschoolindex = "$instance->schoolid:$school->title";
-            $schooloptions = array( $instance->selectschoolindex => $school->title );
+            $schooloptions = [ $instance->selectschoolindex => $school->title ];
 
             $instance->programid = $syncinfo->program->id;
-            $program = $api_client->get_by_id($access_token, 'programs', $instance->programid);
+            $program = $apiclient->get_by_id($accesstoken, 'programs', $instance->programid);
             $instance->selectprogramindex = $instance->programid;
 
-            foreach (array('shortTitle', 'title') as $attr) {
+            foreach (['shortTitle', 'title'] as $attr) {
                 $instance->selectprogramindex .= ':';
                 if (property_exists($program, $attr)) {
                     $instance->selectprogramindex .= $program->$attr;
                 }
             }
-            $programoptions = array( $instance->selectprogramindex => $program->title );
+            $programoptions = [ $instance->selectprogramindex => $program->title ];
 
             $instance->cohortid = $syncinfo->cohort->id;
-            $cohort = $api_client->get_by_id($access_token, 'cohorts', $instance->cohortid);
+            $cohort = $apiclient->get_by_id($accesstoken, 'cohorts', $instance->cohortid);
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
-            $cohortoptions = array( $instance->selectcohortindex =>
+            $cohortoptions = [ $instance->selectcohortindex =>
                                     $cohort->title
                                     .' ('.count($cohort->learnerGroups).')'
-                                    .' ('.count($cohort->users).')');
+                                    .' ('.count($cohort->users).')'];
 
             $instance->learnergroupid = '';
             $instance->selectlearnergroupindex = '';
@@ -103,9 +102,9 @@ class enrol_ilios_edit_form extends moodleform {
             if ($synctype == 'learnerGroup') {
                 $instance->learnergroupid = $syncid;
                 if (!empty($instance->customint2)) {
-                    $group = $enrol->getGroupData('learnerGroup', $instance->learnergroupid);
+                    $group = $enrol->get_group_data('learnerGroup', $instance->learnergroupid);
                 } else {
-                    $group = $api_client->get_by_id($access_token, 'learnerGroups', $instance->learnergroupid);
+                    $group = $apiclient->get_by_id($accesstoken, 'learnerGroups', $instance->learnergroupid);
                 }
 
                 if ($group) {
@@ -114,20 +113,20 @@ class enrol_ilios_edit_form extends moodleform {
                         ' ('. count($group->children) .')';
                     $grouptitle .= ' ('. count($group->users) .')';
                     // $grouptitle .= (empty($instance->customint2)) ? ' ('. count($group->users) .')' : ' ('. count($group->instructors) .')';
-                    $learnergroupoptions = array($instance->selectlearnergroupindex => $grouptitle);
+                    $learnergroupoptions = [$instance->selectlearnergroupindex => $grouptitle];
 
                     if (!empty($group->parent)) {
                         $processparents = function ($child) use (&$processparents,
                             &$learnergroupoptions,
                             &$grouptitle,
                             &$instance,
-                            $api_client,
-                            $access_token
+                            $apiclient,
+                            $accesstoken
                         ) {
-                            $parentgroup = $api_client->get_by_id($access_token, 'learnerGroups', $child->parent);
+                            $parentgroup = $apiclient->get_by_id($accesstoken, 'learnerGroups', $child->parent);
                             $instance->learnergroupid = $parentgroup->id;
                             $instance->selectlearnergroupindex = "$instance->learnergroupid:$parentgroup->title";
-                            $learnergroupoptions = array( "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title);
+                            $learnergroupoptions = [ "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title];
                             if (!empty($parentgroup->parent)){
                                 $grouptitle = $parentgroup->title . ' / '. $grouptitle;
                                 $processparents($parentgroup);
@@ -136,10 +135,10 @@ class enrol_ilios_edit_form extends moodleform {
                         $processparents($group);
                         $instance->subgroupid = $group->id;
                         $instance->selectsubgroupindex = "$group->id:$group->title";
-                        $subgroupoptions = array($instance->selectsubgroupindex => $grouptitle);
+                        $subgroupoptions = [$instance->selectsubgroupindex => $grouptitle];
                     }
                 } else {
-                    $hasOrphanedLearnerGroup = true;
+                    $hasorphanedlearnergroup = true;
                 }
             }
         }
@@ -208,7 +207,7 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
         }
 
-        if ($hasOrphanedLearnerGroup) {
+        if ($hasorphanedlearnergroup) {
             $mform->addElement(
                 'static',
                 'orphaned_learnergroup',
@@ -231,14 +230,14 @@ class enrol_ilios_edit_form extends moodleform {
         }
 
         // Role assignment
-        $mform->addElement('header','roleassignments', get_string('roleassignments', 'role'));
+        $mform->addElement('header', 'roleassignments', get_string('roleassignments', 'role'));
 
         $roles = get_assignable_roles($coursecontext);
         $roles[0] = get_string('none');
         $roles = array_reverse($roles, true); // Descending default sortorder.
         if ($instance->id) {
             if (!isset($roles[$instance->roleid])) {
-                if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
+                if ($role = $DB->get_record('role', ['id' => $instance->roleid])) {
                     $roles = role_fix_names($roles, $coursecontext, ROLENAME_ALIAS, true);
                     $roles[$instance->roleid] = role_get_name($role, $coursecontext);
                 } else {
@@ -253,9 +252,9 @@ class enrol_ilios_edit_form extends moodleform {
         // Group assignment
         // $mform->addElement('header','groupassignment', 'Group assignment');
 
-        $groups = array(0 => get_string('none'));
+        $groups = [0 => get_string('none')];
         foreach (groups_get_all_groups($course->id) as $group) {
-            $groups[$group->id] = format_string($group->name, true, array('context'=>$coursecontext));
+            $groups[$group->id] = format_string($group->name, true, ['context' => $coursecontext]);
         }
 
         $mform->addElement('select', 'customint6', get_string('addgroup', 'enrol_ilios'), $groups);
@@ -273,29 +272,30 @@ class enrol_ilios_edit_form extends moodleform {
         }
 
         $this->set_data($instance);
-        $prog_el =& $mform->getElement('selectschool');
+        $progel =& $mform->getElement('selectschool');
     }
 
     function definition_after_data() {
         global $DB;
         $mform = $this->_form;
 
-        $prog_el = $mform->getElement('selectschool');
-        if ($prog_el->isFrozen()) {
+        $progel = $mform->getElement('selectschool');
+        if ($progel->isFrozen()) {
             return;
         }
 
         /** @var enrol_ilios_plugin $enrol */
         $enrol = enrol_get_plugin('ilios');
-        $api_client = $enrol->get_api_client();
-        $access_token = $enrol->get_api_access_token();
+        $apiclient = $enrol->get_api_client();
+        $accesstoken = $enrol->get_api_access_token();
 
         $selectvalues = $mform->getElementValue('selectschool');
         if (is_array($selectvalues)) {
-            if (strstr($selectvalues[0],':'))
+            if (strstr($selectvalues[0], ':')) {
                 list($schoolid, $schooltitle) = explode(':', $selectvalues[0], 2);
-            else
-                list($schoolid, $schooltitle) = array($selectvalues[0],'','');
+            } else {
+                list($schoolid, $schooltitle) = [$selectvalues[0], '', ''];
+            }
         } else {
             $schoolid = '';
             $schooltitle = '';
@@ -303,22 +303,24 @@ class enrol_ilios_edit_form extends moodleform {
 
         $selectvalues = $mform->getElementValue('selectprogram');
         if (is_array($selectvalues)) {
-            if (strstr($selectvalues[0],':'))
+            if (strstr($selectvalues[0], ':')) {
                 list($programid, $programshorttitle, $programtitle) = explode(':', $selectvalues[0], 3);
-            else
+            } else {
                 list($programid, $programshorttitle, $programtitle)
-                    = array( $selectvalues[0], '', '');
+                    = [ $selectvalues[0], '', ''];
+            }
         } else {
                 list($programid, $programshorttitle, $programtitle)
-                    = array( '', '', '');
+                    = [ '', '', ''];
         }
 
         $selectvalues = $mform->getElementValue('selectcohort');
         if (is_array($selectvalues)) {
-            if (strstr($selectvalues[0],':'))
+            if (strstr($selectvalues[0], ':')) {
                 list($cohortid, $cohorttitle) = explode(':', $selectvalues[0], 2);
-            else
-                list($cohortid, $cohorttitle) = array($selectvalues[0],'','');
+            } else {
+                list($cohortid, $cohorttitle) = [$selectvalues[0], '', ''];
+            }
         } else {
             $cohortid = '';
             $cohorttitle = '';
@@ -326,44 +328,45 @@ class enrol_ilios_edit_form extends moodleform {
 
         $selectvalues = $mform->getElementValue('selectlearnergroup');
         if (is_array($selectvalues)) {
-            if (strstr($selectvalues[0],':'))
+            if (strstr($selectvalues[0], ':')) {
                 list($learnergroupid, $learnergrouptitle) = explode(':', $selectvalues[0], 2);
-            else
-                list($learnergroupid, $learnergrouptitle) = array($selectvalues[0],'','');
+            } else {
+                list($learnergroupid, $learnergrouptitle) = [$selectvalues[0], '', ''];
+            }
         } else {
             $learnergroupid = '';
             $learnergrouptitle = '';
         }
 
-        $schools = $api_client->get($access_token, 'schools', '', array('title' => "ASC"));
+        $schools = $apiclient->get($accesstoken, 'schools', '', ['title' => "ASC"]);
 
-        $prog_el =& $mform->getElement('selectschool');
+        $progel =& $mform->getElement('selectschool');
         if ($schools === null) { // no connection to the server
             // @TODO: get from cache if possible
-            $schooloptions = array('' => get_string('error'));
-            $prog_el->load($schooloptions);
+            $schooloptions = ['' => get_string('error')];
+            $progel->load($schooloptions);
         } else {
             foreach ($schools as $school) {
-                $prog_el->addOption( $school->title, "$school->id:$school->title" );
+                $progel->addOption( $school->title, "$school->id:$school->title" );
             }
         }
 
         if (!empty($schoolid)) {
             $sid = $schoolid;
-            $prog_el =& $mform->getElement('selectprogram');
-            $programoptions = array();
-            $programs = array();
-            $programs = $api_client->get(
-                    $access_token,
+            $progel =& $mform->getElement('selectprogram');
+            $programoptions = [];
+            $programs = [];
+            $programs = $apiclient->get(
+                    $accesstoken,
                     'programs',
-                    array('school' => $sid),
-                    array('title' => "ASC")
+                    ['school' => $sid],
+                    ['title' => "ASC"]
             );
 
             if (!empty($programs)) {
                 foreach ($programs as $program) {
                     $key = $program->id;
-                    foreach (array('shortTitle', 'title') as $attr) {
+                    foreach (['shortTitle', 'title'] as $attr) {
                         $key .= ':';
                         if (property_exists($program, $attr)) {
                             $key .= $program->$attr;
@@ -371,31 +374,31 @@ class enrol_ilios_edit_form extends moodleform {
                     }
                     $programoptions[$key] = $program->title;
                 }
-                $prog_el->load($programoptions);
+                $progel->load($programoptions);
             }
         }
 
         if (!empty($programid)) {
             $pid = $programid;
-            $prog_el =& $mform->getElement('selectcohort');
-            $cohortoptions = array();
+            $progel =& $mform->getElement('selectcohort');
+            $cohortoptions = [];
 
-            $programyears = $api_client->get(
-                    $access_token,
+            $programyears = $apiclient->get(
+                    $accesstoken,
                     'programYears',
-                    array("program" => $pid),
-                    array("startYear" => "ASC"));
-            $programyeararray = array();
+                    ["program" => $pid],
+                    ["startYear" => "ASC"]);
+            $programyeararray = [];
             foreach ($programyears as $progyear) {
                 $programyeararray[] = $progyear->id;
             }
 
             if (!empty($programyeararray)) {
-                $cohorts = $api_client->get(
-                        $access_token,
+                $cohorts = $apiclient->get(
+                        $accesstoken,
                         'cohorts',
-                        array("programYear" => $programyeararray),
-                        array("title" => "ASC")
+                        ["programYear" => $programyeararray],
+                        ["title" => "ASC"]
                 );
 
                 foreach ($cohorts as $cohort) {
@@ -403,20 +406,20 @@ class enrol_ilios_edit_form extends moodleform {
                                                                  .' ('.count($cohort->learnerGroups).')'
                                                                  .' ('.count($cohort->users).')';
                 }
-                $prog_el->load($cohortoptions);
+                $progel->load($cohortoptions);
             }
         }
 
         if (!empty($cohortid)) {
             $cid = $cohortid;
-            $prog_el =& $mform->getElement('selectlearnergroup');
-            $learnergroupoptions = array();
+            $progel =& $mform->getElement('selectlearnergroup');
+            $learnergroupoptions = [];
 
-            $learnergroups = $api_client->get(
-                    $access_token,
+            $learnergroups = $apiclient->get(
+                    $accesstoken,
                     'learnerGroups',
-                    array('cohort' => $cid, 'parent' => 'null'),
-                    array('title' => "ASC")
+                    ['cohort' => $cid, 'parent' => 'null'],
+                    ['title' => "ASC"]
             );
             if (!empty($learnergroups)) {
                 foreach ($learnergroups as $group) {
@@ -424,32 +427,32 @@ class enrol_ilios_edit_form extends moodleform {
                                                      ' ('. count($group->children) .')'.
                                                      ' ('. count($group->users) .')';
                 }
-                $prog_el->load($learnergroupoptions);
+                $progel->load($learnergroupoptions);
             }
         }
 
         if (!empty($learnergroupid)) {
             $gid = $learnergroupid;
-            $prog_el =& $mform->getElement('selectsubgroup');
-            $subgroupoptions = array();
+            $progel =& $mform->getElement('selectsubgroup');
+            $subgroupoptions = [];
 
-            $subgroups = $api_client->get(
-                    $access_token,
+            $subgroups = $apiclient->get(
+                    $accesstoken,
                     'learnerGroups',
-                    array("parent" => $gid),
-                    array("title" => "ASC")
+                    ["parent" => $gid],
+                    ["title" => "ASC"]
             );
             foreach ($subgroups as $subgroup) {
                 $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                    ' ('. count($subgroup->children) .')'.
                                                                    ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
-                    $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $api_client, $access_token) {
-                        $subgrps = $api_client->get(
-                                $access_token,
+                    $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $apiclient, $accesstoken) {
+                        $subgrps = $apiclient->get(
+                                $accesstoken,
                                 'learnerGroups',
-                                array( 'parent' => $parent->id),
-                                array( 'title' => "ASC")
+                                [ 'parent' => $parent->id],
+                                [ 'title' => "ASC"]
                         );
                         foreach ($subgrps as $subgrp) {
                             $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
@@ -463,7 +466,7 @@ class enrol_ilios_edit_form extends moodleform {
                     $processchildren($subgroup);
                 }
             }
-            $prog_el->load($subgroupoptions);
+            $progel->load($subgroupoptions);
         }
     }
 
@@ -481,16 +484,16 @@ class enrol_ilios_edit_form extends moodleform {
 
         // Check for existing role
         $selectgrouptype = 'cohort';
-        list($selectgroupid,$selecttitle) = explode(':',$data['selectcohort'], 2);
+        list($selectgroupid, $selecttitle) = explode(':', $data['selectcohort'], 2);
         if (!empty($data['selectlearnergroup'])){
             $selectgrouptype = 'learnerGroup';
-            list($selectgroupid,$selecttitle) = explode(':',$data['selectlearnergroup'], 2);
+            list($selectgroupid, $selecttitle) = explode(':', $data['selectlearnergroup'], 2);
             if (!empty($data['selectsubgroup'])) {
-                list($selectgroupid,$selecttitle) = explode(':',$data['selectsubgroup'], 2);
+                list($selectgroupid, $selecttitle) = explode(':', $data['selectsubgroup'], 2);
             }
         }
 
-        $params = array('roleid'=>$data['roleid'], 'customchar1'=>$selectgrouptype,'customint1'=>$selectgroupid,'customint2'=>$data['selectusertype'],'courseid'=>$data['courseid'], 'id'=>$data['id']);
+        $params = ['roleid' => $data['roleid'], 'customchar1' => $selectgrouptype, 'customint1' => $selectgroupid, 'customint2' => $data['selectusertype'], 'courseid' => $data['courseid'], 'id' => $data['id']];
         // customint2 could be NULL or 0 on the database
         if (empty($data['selectusertype']) && $DB->record_exists_select('enrol', "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1 AND customint2 IS NULL AND courseid = :courseid AND enrol = 'ilios' AND id <> :id", $params)) {
                 $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');

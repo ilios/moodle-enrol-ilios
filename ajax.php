@@ -36,9 +36,9 @@ require_once($CFG->dirroot.'/group/lib.php');
 $id      = required_param('id', PARAM_INT); // course id
 $action  = required_param('action', PARAM_ALPHANUMEXT);
 
-$PAGE->set_url(new moodle_url('/enrol/ilios/ajax.php', array('id'=>$id, 'action'=>$action)));
+$PAGE->set_url(new moodle_url('/enrol/ilios/ajax.php', ['id' => $id, 'action' => $action]));
 
-$course = $DB->get_record('course', array('id'=>$id), '*', MUST_EXIST);
+$course = $DB->get_record('course', ['id' => $id], '*', MUST_EXIST);
 $context = context_course::instance($course->id, MUST_EXIST);
 
 if ($course->id == SITEID) {
@@ -65,14 +65,14 @@ $outcome->error = '';
 
 /** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');
-$api_client = $enrol->get_api_client();
-$access_token = $enrol->get_api_access_token();
+$apiclient = $enrol->get_api_client();
+$accesstoken = $enrol->get_api_access_token();
 
 switch ($action) {
     case 'getselectschooloptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $schools = $api_client->get($access_token, 'schools', '', array('title' => "ASC"));
-        $schoolarray = array();
+        $schools = $apiclient->get($accesstoken, 'schools', '', ['title' => "ASC"]);
+        $schoolarray = [];
         foreach ($schools as $school) {
             $schoolarray["$school->id:$school->title"] = $school->title;
         }
@@ -82,12 +82,12 @@ switch ($action) {
     case 'getselectprogramoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $sid = required_param('filterid', PARAM_INT); // school id
-        $programs = array();
-        $programs = $api_client->get($access_token, 'programs', array('school' => $sid), array('title' => "ASC"));
-        $programarray = array();
+        $programs = [];
+        $programs = $apiclient->get($accesstoken, 'programs', ['school' => $sid], ['title' => "ASC"]);
+        $programarray = [];
         foreach ($programs as $program) {
             $key = $program->id;
-            foreach (array('shortTitle', 'title') as $attr) {
+            foreach (['shortTitle', 'title'] as $attr) {
                 $key .= ':';
                 if (property_exists($program, $attr)) {
                     $key .= $program->$attr;
@@ -101,24 +101,24 @@ switch ($action) {
     case 'getselectcohortoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $pid = required_param('filterid', PARAM_INT);
-        $programyears = $api_client->get(
-                $access_token,
+        $programyears = $apiclient->get(
+                $accesstoken,
                 'programYears',
-                array("program" => $pid),
-                array("startYear" => "ASC")
+                ["program" => $pid],
+                ["startYear" => "ASC"]
         );
-        $programyeararray = array();
-        $cohortoptions = array();
+        $programyeararray = [];
+        $cohortoptions = [];
         foreach ($programyears as $progyear) {
             $programyeararray[] = $progyear->id;
         }
 
         if (!empty($programyeararray)) {
-            $cohorts = $api_client->get(
-                    $access_token,
+            $cohorts = $apiclient->get(
+                    $accesstoken,
                     'cohorts',
-                    array("programYear" => $programyeararray),
-                    array("title" => "ASC")
+                    ["programYear" => $programyeararray],
+                    ["title" => "ASC"]
             );
             foreach ($cohorts as $cohort) {
                 $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
@@ -133,13 +133,13 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $cid = required_param('filterid', PARAM_INT);    // cohort id
         $usertype = optional_param('usertype', 0, PARAM_INT); // learner or instructor
-        $learnergroups = $api_client->get(
-                $access_token,
+        $learnergroups = $apiclient->get(
+                $accesstoken,
                 'learnerGroups',
-                array('cohort' => $cid, 'parent' => 'null'),
-                array('title'=> "ASC")
+                ['cohort' => $cid, 'parent' => 'null'],
+                ['title' => "ASC"]
         );
-        $grouparray = array();
+        $grouparray = [];
         foreach ($learnergroups as $group) {
             $grouparray["$group->id:$group->title"] = $group->title.
                                                     ' ('. count($group->children) .')';
@@ -152,12 +152,12 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $gid = required_param('filterid', PARAM_INT);    // group id
         $usertype = optional_param('usertype', 0, PARAM_INT); // learner or instructor
-        $subgroupoptions = array();
-        $subgroups = $api_client->get(
-                $access_token,
+        $subgroupoptions = [];
+        $subgroups = $apiclient->get(
+                $accesstoken,
                 'learnerGroups',
-                array("parent" => $gid),
-                array("title" => "ASC")
+                ["parent" => $gid],
+                ["title" => "ASC"]
         );
         foreach ($subgroups as $subgroup) {
             $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
@@ -165,12 +165,12 @@ switch ($action) {
             $subgroupoptions["$subgroup->id:$subgroup->title"] .= ' ('. count($subgroup->users) .')';
 
             if (!empty($subgroup->children)) {
-                $processchildren = function ($parent) use (&$processchildren,&$subgroupoptions, $api_client, $access_token) {
-                    $subgrps = $api_client->get(
-                            $access_token,
+                $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $apiclient, $accesstoken) {
+                    $subgrps = $apiclient->get(
+                            $accesstoken,
                             'learnerGroups',
-                            array( 'parent' => $parent->id),
-                            array( 'title' => "ASC")
+                            [ 'parent' => $parent->id],
+                            [ 'title' => "ASC"]
                     );
                     foreach ($subgrps as $subgrp) {
                         $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
@@ -191,15 +191,15 @@ switch ($action) {
     case 'getselectinstructorgroupoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $gid = required_param('filterid', PARAM_INT); // group id
-        $instructorgroupoptions = array();
-        $learnergroup = $api_client->get_by_id($access_token, 'learnerGroups', $gid);
+        $instructorgroupoptions = [];
+        $learnergroup = $apiclient->get_by_id($accesstoken, 'learnerGroups', $gid);
         if (!empty($learnergroup->instructorGroups)) {
-            $instructorgroups = $api_client->get(
-                    $access_token,
+            $instructorgroups = $apiclient->get(
+                    $accesstoken,
                     'instructorGroups',
                     // array("id" => $learnergroup->instructorGroups),
                      '',
-                    array("title" => "ASC")
+                    ["title" => "ASC"]
             );
             foreach ($instructorgroups as $instructorgroup) {
                 $instructorgroupoptions["$instructorgroup->id:$instructorgroup->title"] = $instructorgroup->title.

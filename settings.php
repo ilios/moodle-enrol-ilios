@@ -27,11 +27,11 @@ defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
 
-    //--- general settings -----------------------------------------------------------------------------------
+    // --- general settings -----------------------------------------------------------------------------------
     $settings->add(new admin_setting_heading('enrol_ilios_settings', '', get_string('pluginname_desc', 'enrol_ilios')));
 
 
-    //--- enrol instance defaults ----------------------------------------------------------------------------
+    // --- enrol instance defaults ----------------------------------------------------------------------------
     if (!during_initial_install()) {
         // FIX: Change host to host_url (more descriptive)
         $settings->add(new admin_setting_configtext('enrol_ilios/host_url', get_string('host_url', 'enrol_ilios'), get_string('host_url_desc', 'enrol_ilios'), 'localhost'));
@@ -44,9 +44,9 @@ if ($ADMIN->fulltree) {
                                                       get_string('defaultlearnerrole', 'enrol_ilios'),
                                                       '', $student->id, $options));
 
-        $options = array(
+        $options = [
             ENROL_EXT_REMOVED_UNENROL        => get_string('extremovedunenrol', 'enrol'),
-            ENROL_EXT_REMOVED_SUSPENDNOROLES => get_string('extremovedsuspendnoroles', 'enrol'));
+            ENROL_EXT_REMOVED_SUSPENDNOROLES => get_string('extremovedsuspendnoroles', 'enrol')];
         $settings->add(new admin_setting_configselect('enrol_ilios/unenrolaction', get_string('extremovedaction', 'enrol'), get_string('extremovedaction_help', 'enrol'), ENROL_EXT_REMOVED_UNENROL, $options));
     }
 }

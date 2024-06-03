@@ -29,13 +29,13 @@ function xmldb_enrol_ilios_uninstall() {
     global $CFG, $DB;
 
     $ilios = enrol_get_plugin('ilios');
-    $rs = $DB->get_recordset('enrol', array('enrol'=>'ilios'));
+    $rs = $DB->get_recordset('enrol', ['enrol' => 'ilios']);
     foreach ($rs as $instance) {
         $ilios->delete_instance($instance);
     }
     $rs->close();
 
-    role_unassign_all(array('component'=>'enrol_ilios'));
+    role_unassign_all(['component' => 'enrol_ilios']);
 
     return true;
 }

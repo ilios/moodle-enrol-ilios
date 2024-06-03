@@ -36,7 +36,7 @@ require_once $CFG->libdir.'/filelib.php';
  */
 class enrol_ilios_plugin extends enrol_plugin {
 
-    protected ilios_client $api_client;
+    protected ilios_client $apiclient;
 
     public const SETTINGS_API_ACCESS_TOKEN = 'apikey';
 
@@ -44,7 +44,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * Constructor
      */
     public function __construct() {
-        $this->api_client = new ilios_client($this->get_config('host_url', ''), new curl());
+        $this->apiclient = new ilios_client($this->get_config('host_url', ''), new curl());
     }
 
     /**
@@ -69,7 +69,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return ilios_client
      */
     public function get_api_client(): ilios_client {
-        return $this->api_client;
+        return $this->apiclient;
     }
 
     /**
@@ -103,29 +103,29 @@ class enrol_ilios_plugin extends enrol_plugin {
             // $groups = $this->iliosclient->get_by_ids($this->get_api_access_token(), $syncfield.'s', $syncid);
 
             // if (!empty($groups)) {
-            //     $group = $groups[0];
-            //     $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
+            // $group = $groups[0];
+            // $groupname = format_string($group->title, true, array('context'=>context::instance_by_id($instance->courseid)));
             // } else
             {
                 $groupname = get_string('pluginshortname', 'enrol_'.$enrol);
                 $syncinfo = json_decode($instance->customtext1);
-                if (!empty($syncinfo)) {
-                    $schooltitle = $syncinfo->school->title;
-                    $programtitle = $syncinfo->program->shorttitle;
-                    $cohorttitle = $syncinfo->cohort->title;
-                    $groupname .= ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
-                    if (isset($syncinfo->learnerGroup)) {
-                        $grouptitle = $syncinfo->learnerGroup->title;
-                        $groupname .= '/'.$grouptitle;
-                    }
-                    if (isset($syncinfo->subGroup)) {
-                        $grouptitle = $syncinfo->subGroup->title;
-                        $groupname .= '/'.$grouptitle;
-                    }
+            if (!empty($syncinfo)) {
+                $schooltitle = $syncinfo->school->title;
+                $programtitle = $syncinfo->program->shorttitle;
+                $cohorttitle = $syncinfo->cohort->title;
+                $groupname .= ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
+                if (isset($syncinfo->learnerGroup)) {
+                    $grouptitle = $syncinfo->learnerGroup->title;
+                    $groupname .= '/'.$grouptitle;
+                }
+                if (isset($syncinfo->subGroup)) {
+                    $grouptitle = $syncinfo->subGroup->title;
+                    $groupname .= '/'.$grouptitle;
                 }
             }
+            }
 
-            if ($role = $DB->get_record('role', array('id'=>$instance->roleid))) {
+            if ($role = $DB->get_record('role', ['id' => $instance->roleid])) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
                 if (empty($instance->customint2)) {
                     $groupname .= ' (Learner => '.$role;
@@ -150,7 +150,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             return $groupname;
 
         } else {
-            return format_string($instance->name, true, array('context'=>context_course::instance($instance->courseid)));
+            return format_string($instance->name, true, ['context' => context_course::instance($instance->courseid)]);
         }
     }
 
@@ -162,10 +162,10 @@ class enrol_ilios_plugin extends enrol_plugin {
      */
     public function get_newinstance_link($courseid) {
         if (!$this->can_add_new_instances($courseid)) {
-            return NULL;
+            return null;
         }
         // Multiple instances supported - multiple parent courses linked.
-        return new moodle_url('/enrol/ilios/edit.php', array('courseid'=>$courseid));
+        return new moodle_url('/enrol/ilios/edit.php', ['courseid' => $courseid]);
     }
 
     /**
@@ -200,12 +200,12 @@ class enrol_ilios_plugin extends enrol_plugin {
         }
         $context = context_course::instance($instance->courseid);
 
-        $icons = array();
+        $icons = [];
 
         if (has_capability('enrol/ilios:config', $context)) {
-            $editlink = new moodle_url("/enrol/ilios/edit.php", array('courseid'=>$instance->courseid, 'id'=>$instance->id));
+            $editlink = new moodle_url("/enrol/ilios/edit.php", ['courseid' => $instance->courseid, 'id' => $instance->id]);
             $icons[] = $OUTPUT->action_icon($editlink, new pix_icon('t/edit', get_string('edit'), 'core',
-                    array('class' => 'iconsmall')));
+                    ['class' => 'iconsmall']));
         }
 
         return $icons;
@@ -219,17 +219,17 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return int exit code, 0 means ok, 2 means plugin disabled.
      * @throws \Exception
      */
-    public function sync($trace, $courseid = NULL) {
+    public function sync($trace, $courseid = null) {
         global $CFG, $DB;
         require_once $CFG->dirroot . '/group/lib.php';
 
-        $api_client = $this->get_api_client();
-        $access_token = $this->get_api_access_token();
+        $apiclient = $this->get_api_client();
+        $accesstoken = $this->get_api_access_token();
 
         if (!enrol_is_enabled('ilios')) {
             // Purge all roles if ilios sync disabled, those can be recreated later here by cron or CLI.
             $trace->output('Ilios enrolment sync plugin is disabled, unassigning all plugin roles and stopping.');
-            role_unassign_all(array('component'=>'enrol_ilios'));
+            role_unassign_all(['component' => 'enrol_ilios']);
             return 2;
         }
 
@@ -240,7 +240,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         $trace->output('Starting user enrolment synchronisation...');
 
         $allroles = get_all_roles();
-        $iliosusers = array(); // cache user data
+        $iliosusers = []; // cache user data
 
         $unenrolaction = $this->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
 
@@ -250,7 +250,7 @@ class enrol_ilios_plugin extends enrol_plugin {
               FROM {enrol} e
              WHERE e.enrol = 'ilios' $onecourse";
 
-        $params = array();
+        $params = [];
         $params['courseid'] = $courseid;
         $params['suspended'] = ENROL_USER_SUSPENDED;
         $instances = $DB->get_recordset_sql($sql, $params);
@@ -261,10 +261,10 @@ class enrol_ilios_plugin extends enrol_plugin {
 
             if (!empty($instance->customint2)) {
                 // Need to get instructor ids.  This function takes longer to run.
-                $group = $this->getGroupData($synctype, $syncid);
+                $group = $this->get_group_data($synctype, $syncid);
             } else {
                 // No need to get instructor ids.
-                $group = $api_client->get_by_id($access_token, $synctype.'s', $syncid);
+                $group = $apiclient->get_by_id($accesstoken, $synctype.'s', $syncid);
             }
 
             if (empty($group)) {
@@ -274,18 +274,18 @@ class enrol_ilios_plugin extends enrol_plugin {
 
             if (!empty($group)) {
 
-                $enrolleduserids = array();    // keep a list of enrolled user's Moodle userid (both learners and instructors).
+                $enrolleduserids = [];    // keep a list of enrolled user's Moodle userid (both learners and instructors).
                 $users = []; // ilios users in that group
-                $suspendEnrolments = []; // list of user enrollments to suspend
+                $suspendenrolments = []; // list of user enrollments to suspend
 
                 $users = [];
 
                 if (!empty($instance->customint2) && !empty($group->instructors)) {
                     $trace->output("Enrolling instructors to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $api_client->get_by_ids($access_token, 'users', $group->instructors);
-                } elseif (!empty($group->users)) {
+                    $users = $apiclient->get_by_ids($accesstoken, 'users', $group->instructors);
+                } else if (!empty($group->users)) {
                     $trace->output("Enrolling students to Course ID ".$instance->courseid." with Role ID ".$instance->roleid." through Ilios Sync ID ".$instance->id.".");
-                    $users = $api_client->get_by_ids($access_token, 'users', $group->users);
+                    $users = $apiclient->get_by_ids($accesstoken, 'users', $group->users);
                 }
                 $trace->output(count($users) . " Ilios users found.");
 
@@ -294,10 +294,10 @@ class enrol_ilios_plugin extends enrol_plugin {
                     if (!isset($iliosusers[$user->id])) {
                         $iliosusers[$user->id] = null;
                         if (!empty($user->campusId)) {
-                            $urec = $DB->get_record('user', array("idnumber" => $user->campusId));
+                            $urec = $DB->get_record('user', ["idnumber" => $user->campusId]);
                             if (!empty($urec)) {
-                                $iliosusers[$user->id] = array( 'id' => $urec->id,
-                                                                'syncfield' => $urec->idnumber );
+                                $iliosusers[$user->id] = [ 'id' => $urec->id,
+                                                                'syncfield' => $urec->idnumber ];
                             }
                         }
                     }
@@ -311,7 +311,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                     } else {
                         $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
 
-                        $ue = $DB->get_record('user_enrolments', array('enrolid' => $instance->id, 'userid' => $userid));
+                        $ue = $DB->get_record('user_enrolments', ['enrolid' => $instance->id, 'userid' => $userid]);
 
                         // don't enroll disabled ilios users that are currently not enrolled.
                         if (empty($ue) && !$user->enabled) {
@@ -326,7 +326,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                         // flag actively enrolled users that are disabled in ilios
                         // for enrollment suspension further downstream
                         if (!empty($ue) &&  ENROL_USER_ACTIVE === (int) $ue->status && !$user->enabled) {
-                            $suspendEnrolments[] = $ue;
+                            $suspendenrolments[] = $ue;
                             continue;
                         }
 
@@ -346,7 +346,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                 }
 
                 // suspend active enrollments for users that are disabled in ilios
-                foreach ($suspendEnrolments as $ue) {
+                foreach ($suspendenrolments as $ue) {
                     $trace->output("Suspending enrollment for disabled Ilios user: userid  {$ue->userid} ==> courseid {$instance->courseid}.", 1);
                     $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
                 }
@@ -373,7 +373,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                         if ($ue->status != ENROL_USER_SUSPENDED) {
                             $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
                             $context = context_course::instance($instance->courseid);
-                            role_unassign_all(array('userid'=>$ue->userid, 'contextid'=>$context->id, 'component'=>'enrol_ilios', 'itemid'=>$instance->id));
+                            role_unassign_all(['userid' => $ue->userid, 'contextid' => $context->id, 'component' => 'enrol_ilios', 'itemid' => $instance->id]);
                             $trace->output("suspending and unsassigning all roles: userid ".$ue->userid." ==> courseid ".$instance->courseid, 1);
                         }
                     }
@@ -394,7 +394,7 @@ class enrol_ilios_plugin extends enrol_plugin {
               JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
          LEFT JOIN {role_assignments} ra ON (ra.contextid = c.id AND ra.userid = ue.userid AND ra.itemid = e.id AND ra.component = 'enrol_ilios' AND e.roleid = ra.roleid)
              WHERE ue.status = :useractive AND ra.id IS NULL";
-        $params = array();
+        $params = [];
         $params['statusenabled'] = ENROL_INSTANCE_ENABLED;
         $params['useractive'] = ENROL_USER_ACTIVE;
         $params['coursecontext'] = CONTEXT_COURSE;
@@ -415,7 +415,7 @@ class enrol_ilios_plugin extends enrol_plugin {
               JOIN {enrol} e ON (e.id = ra.itemid AND e.enrol = 'ilios' $onecourse)
          LEFT JOIN {user_enrolments} ue ON (ue.enrolid = e.id AND ue.userid = ra.userid AND ue.status = :useractive)
              WHERE ra.component = 'enrol_ilios' AND (ue.id IS NULL OR e.status <> :statusenabled)";
-        $params = array();
+        $params = [];
         $params['statusenabled'] = ENROL_INSTANCE_ENABLED;
         $params['useractive'] = ENROL_USER_ACTIVE;
         $params['coursecontext'] = CONTEXT_COURSE;
@@ -438,7 +438,7 @@ class enrol_ilios_plugin extends enrol_plugin {
               JOIN {enrol} e ON (e.enrol = 'ilios' AND e.courseid = g.courseid $onecourse)
               JOIN {user_enrolments} ue ON (ue.userid = gm.userid AND ue.enrolid = e.id)
              WHERE gm.component='enrol_ilios' AND gm.itemid = e.id AND g.id <> e.customint6";
-        $params = array();
+        $params = [];
         $params['courseid'] = $courseid;
 
         $rs = $DB->get_recordset_sql($sql, $params);
@@ -456,7 +456,7 @@ class enrol_ilios_plugin extends enrol_plugin {
               JOIN {user} u ON (u.id = ue.userid AND u.deleted = 0)
          LEFT JOIN {groups_members} gm ON (gm.groupid = g.id AND gm.userid = ue.userid)
              WHERE gm.id IS NULL";
-        $params = array();
+        $params = [];
         $params['courseid'] = $courseid;
 
         $rs = $DB->get_recordset_sql($sql, $params);
@@ -472,15 +472,15 @@ class enrol_ilios_plugin extends enrol_plugin {
     }
 
     // /**
-    //  * Called after updating/inserting course.
-    //  *
-    //  * @param bool $inserted true if course just inserted
-    //  * @param stdClass $course
-    //  * @param stdClass $data form data
-    //  * @return void
-    //  */
+    // * Called after updating/inserting course.
+    // *
+    // * @param bool $inserted true if course just inserted
+    // * @param stdClass $course
+    // * @param stdClass $data form data
+    // * @return void
+    // */
     // public function course_updated($inserted, $course, $data) {
-    //     // It turns out there is no need for cohorts to deal with this hook, see MDL-34870.
+    // It turns out there is no need for cohorts to deal with this hook, see MDL-34870.
     // }
 
     /**
@@ -525,14 +525,14 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @throws \Exception
      */
     public function get_user_enrolment_actions(course_enrolment_manager $manager, $ue) {
-        $actions = array();
+        $actions = [];
         $context = $manager->get_context();
         $instance = $ue->enrolmentinstance;
         $params = $manager->get_moodlepage()->url->params();
         $params['ue'] = $ue->id;
         if ($this->allow_unenrol_user($instance, $ue) && has_capability('enrol/ilios:unenrol', $context)) {
             $url = new moodle_url('/enrol/unenroluser.php', $params);
-            $actions[] = new user_enrolment_action(new pix_icon('t/delete', ''), get_string('unenrol', 'enrol'), $url, array('class'=>'unenrollink', 'rel'=>$ue->id));
+            $actions[] = new user_enrolment_action(new pix_icon('t/delete', ''), get_string('unenrol', 'enrol'), $url, ['class' => 'unenrollink', 'rel' => $ue->id]);
         }
         return $actions;
     }
@@ -545,15 +545,15 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @throws \Exception
      */
     // public function get_manual_enrol_button(course_enrolment_manager $manager) {
-    //     $course = $manager->get_course();
-    //     if (!$this->can_add_new_instances($course->id)) {
-    //         return false;
-    //     }
+    // $course = $manager->get_course();
+    // if (!$this->can_add_new_instances($course->id)) {
+    // return false;
+    // }
 
-    //     $iliosurl = new moodle_url('/enrol/ilios/edit.php', array('courseid' => $course->id));
-    //     $button = new enrol_user_button($iliosurl, get_string('enrol', 'enrol_ilios'), 'get');
+    // $iliosurl = new moodle_url('/enrol/ilios/edit.php', array('courseid' => $course->id));
+    // $button = new enrol_user_button($iliosurl, get_string('enrol', 'enrol_ilios'), 'get');
 
-    //     return $button;
+    // return $button;
     // }
 
     /**
@@ -580,7 +580,7 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         // if ($data->roleid and $DB->record_exists('cohort', array('id'=>$data->customint1))) {
         if ($data->roleid) {
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'customchar1'=>$data->customchar1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
+            $instance = $DB->get_record('enrol', ['roleid' => $data->roleid, 'customint1' => $data->customint1, 'customchar1' => $data->customchar1, 'courseid' => $course->id, 'enrol' => $this->get_name()]);
             if ($instance) {
                 $instanceid = $instance->id;
             } else {
@@ -593,7 +593,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $trace->finished();
 
         } else if ($this->get_config('unenrolaction') == ENROL_EXT_REMOVED_SUSPENDNOROLES) {
-            $instance = $DB->get_record('enrol', array('roleid'=>$data->roleid, 'customint1'=>$data->customint1, 'customerchar1'=>$data->customchar1, 'courseid'=>$course->id, 'enrol'=>$this->get_name()));
+            $instance = $DB->get_record('enrol', ['roleid' => $data->roleid, 'customint1' => $data->customint1, 'customerchar1' => $data->customchar1, 'courseid' => $course->id, 'enrol' => $this->get_name()]);
             if ($instance) {
                 $instanceid = $instance->id;
             } else {
@@ -632,7 +632,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         // ENROL_EXT_REMOVED_SUSPENDNOROLES means all previous enrolments are restored
         // but without roles and suspended.
 
-        if (!$DB->record_exists('user_enrolments', array('enrolid'=>$instance->id, 'userid'=>$userid))) {
+        if (!$DB->record_exists('user_enrolments', ['enrolid' => $instance->id, 'userid' => $userid])) {
             $this->enrol_user($instance, $userid, null, $data->timestart, $data->timeend, ENROL_USER_SUSPENDED);
         }
     }
@@ -662,14 +662,14 @@ class enrol_ilios_plugin extends enrol_plugin {
      *               also iterate into subgroups.
      * @throws \Exception
      */
-    public function getGroupData($grouptype, $groupid) {
-        $api_client = $this->get_api_client();
-        $access_token = $this->get_api_access_token();
+    public function get_group_data($grouptype, $groupid) {
+        $apiclient = $this->get_api_client();
+        $accesstoken = $this->get_api_access_token();
         // Ilios API uses a plural noun, append an 's'.
-        $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid );
+        $group = $apiclient->get_by_id($accesstoken, $grouptype.'s', $groupid );
 
         if ($group && $grouptype === 'learnerGroup') {
-            $group->instructors = $this->getInstructorIdsFromGroup($grouptype, $groupid);
+            $group->instructors = $this->get_instructor_ids_from_group($grouptype, $groupid);
             asort($group->instructors);
         }
 
@@ -683,32 +683,32 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return array
      * @throws moodle_exception
      */
-    private function getInstructorIdsFromGroup($grouptype, $groupid) {
+    private function get_instructor_ids_from_group($grouptype, $groupid) {
 
-        $api_client = $this->get_api_client();
-        $access_token = $this->get_api_access_token();
+        $apiclient = $this->get_api_client();
+        $accesstoken = $this->get_api_access_token();
 
         // Ilios API uses a plural noun, append an 's'.
-        $group = $api_client->get_by_id($access_token, $grouptype.'s', $groupid);
+        $group = $apiclient->get_by_id($accesstoken, $grouptype.'s', $groupid);
 
-        $instructorGroupIds = array();
-        $instructorIds = array();
+        $instructorgroupids = [];
+        $instructorids = [];
 
         // get instructors/instructor-groups from the offerings that this learner group is being taught in.
         if (!empty($group->offerings)) {
-            $offerings = $api_client->get_by_ids($access_token, 'offerings', $group->offerings);
+            $offerings = $apiclient->get_by_ids($accesstoken, 'offerings', $group->offerings);
 
             foreach ($offerings as $offering) {
                 if (empty($offering->instructors)) {
                     // no instructor AND no instructor groups have been set for this offering.
                     // fall back to the default instructors/instructor-groups defined for the learner group.
-                    $instructorIds = array_merge($instructorIds, $group->instructors);
-                    $instructorGroupIds = array_merge($instructorGroupIds, $group->instructorGroups);
+                    $instructorids = array_merge($instructorids, $group->instructors);
+                    $instructorgroupids = array_merge($instructorgroupids, $group->instructorGroups);
                 } else {
                     // if there are instructors and/or instructor-groups set on the offering,
                     // then use these.
-                    $instructorIds = array_merge($instructorIds, $offering->instructors);
-                    $instructorGroupIds = array_merge($instructorGroupIds, $offering->instructorGroups);
+                    $instructorids = array_merge($instructorids, $offering->instructors);
+                    $instructorgroupids = array_merge($instructorgroupids, $offering->instructorGroups);
                 }
             }
 
@@ -717,19 +717,19 @@ class enrol_ilios_plugin extends enrol_plugin {
         // get instructors/instructor-groups from the ilm sessions that this learner group is being taught in.
         // (this is a rinse/repeat from offerings-related code above)
         if (!empty($group->ilmSessions)) {
-            $ilms = $api_client->get_by_ids($access_token, 'ilmSessions', $group->ilmSessions);
+            $ilms = $apiclient->get_by_ids($accesstoken, 'ilmSessions', $group->ilmSessions);
 
             foreach ($ilms as $ilm) {
                 if (empty($ilm->instructors) && empty($ilm->instructorGroups)) {
                     // no instructor AND no instructor groups have been set for this offering.
                     // fall back to the default instructors/instructor-groups defined for the learner group.
-                    $instructorIds = array_merge($instructorIds, $group->instructors);
-                    $instructorGroupIds = array_merge($instructorGroupIds, $group->instructorGroups);
+                    $instructorids = array_merge($instructorids, $group->instructors);
+                    $instructorgroupids = array_merge($instructorgroupids, $group->instructorGroups);
                 } else {
                     // if there are instructors and/or instructor-groups set on the offering,
                     // then use these.
-                    $instructorIds = array_merge($instructorIds, $ilm->instructors);
-                    $instructorGroupIds = array_merge($instructorGroupIds, $ilm->instructorGroups);
+                    $instructorids = array_merge($instructorids, $ilm->instructors);
+                    $instructorgroupids = array_merge($instructorgroupids, $ilm->instructorGroups);
                 }
             }
         }
@@ -737,25 +737,25 @@ class enrol_ilios_plugin extends enrol_plugin {
         // get instructors from sub-learnerGroups
         if (!empty($group->children)) {
             foreach($group->children as $subgroupid) {
-                $instructorIds = array_merge($instructorIds, $this->getInstructorIdsFromGroup('learnerGroup', $subgroupid));
+                $instructorids = array_merge($instructorids, $this->get_instructor_ids_from_group('learnerGroup', $subgroupid));
                 // We don't care about instructor groups here, we will merge instructor groups into the $instructorIds array later.
             }
         }
 
         // next, get the ids of all instructors from the instructor-groups that we determined as relevant earlier.
         // but first.. let's de-dupe them.
-        $instructorGroupIds = array_unique($instructorGroupIds);
-        if (!empty($instructorGroupIds)) {
-            $instructorGroups = $api_client->get_by_ids($access_token, 'instructorGroups', $instructorGroupIds);
-            foreach ($instructorGroups as $instructorGroup) {
-                $instructorIds = array_merge($instructorIds, $instructorGroup->users);
+        $instructorgroupids = array_unique($instructorgroupids);
+        if (!empty($instructorgroupids)) {
+            $instructorgroups = $apiclient->get_by_ids($accesstoken, 'instructorGroups', $instructorgroupids);
+            foreach ($instructorgroups as $instructorgroup) {
+                $instructorids = array_merge($instructorids, $instructorgroup->users);
             }
         }
 
         // finally, we retrieve all the users that were identified as relevant instructors earlier.
-        $instructorIds = array_unique($instructorIds);
+        $instructorids = array_unique($instructorids);
 
-        return $instructorIds;
+        return $instructorids;
     }
 }
 
