@@ -23,8 +23,14 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-defined('MOODLE_INTERNAL') || die();
-
+/**
+ * Callback to run during plugin uninstallation.
+ * Deletes all Ilios enrolments and removes any user role assignments for this plugin.
+ *
+ * @return bool Always TRUE.
+ * @throws coding_exception
+ * @throws dml_exception
+ */
 function xmldb_enrol_ilios_uninstall() {
     global $CFG, $DB;
 

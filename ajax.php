@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * This file processes AJAX enrolment actions and returns JSON for the ilios plugin
+ * This file processes AJAX enrolment actions and returns JSON for the ilios plugin.
  *
  * The general idea behind this file is that any errors should throw exceptions
  * which will be returned and acted upon by the calling AJAX script.
@@ -33,7 +33,7 @@ require_once($CFG->dirroot.'/enrol/locallib.php');
 require_once($CFG->dirroot.'/group/lib.php');
 
 // Must have the sesskey.
-$id      = required_param('id', PARAM_INT); // course id
+$id      = required_param('id', PARAM_INT); // Course ID.
 $action  = required_param('action', PARAM_ALPHANUMEXT);
 
 $PAGE->set_url(new moodle_url('/enrol/ilios/ajax.php', ['id' => $id, 'action' => $action]));
@@ -81,7 +81,7 @@ switch ($action) {
 
     case 'getselectprogramoptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $sid = required_param('filterid', PARAM_INT); // school id
+        $sid = required_param('filterid', PARAM_INT); // School ID.
         $programs = [];
         $programs = $apiclient->get($accesstoken, 'programs', ['school' => $sid], ['title' => "ASC"]);
         $programarray = [];
@@ -131,8 +131,8 @@ switch ($action) {
 
     case 'getselectlearnergroupoptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $cid = required_param('filterid', PARAM_INT);    // cohort id
-        $usertype = optional_param('usertype', 0, PARAM_INT); // learner or instructor
+        $cid = required_param('filterid', PARAM_INT);    // Cohort ID.
+        $usertype = optional_param('usertype', 0, PARAM_INT); // Learner or instructor.
         $learnergroups = $apiclient->get(
                 $accesstoken,
                 'learnerGroups',
@@ -150,8 +150,8 @@ switch ($action) {
 
     case 'getselectsubgroupoptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $gid = required_param('filterid', PARAM_INT);    // group id
-        $usertype = optional_param('usertype', 0, PARAM_INT); // learner or instructor
+        $gid = required_param('filterid', PARAM_INT);    // Group ID.
+        $usertype = optional_param('usertype', 0, PARAM_INT); // Learner or instructor.
         $subgroupoptions = [];
         $subgroups = $apiclient->get(
                 $accesstoken,
@@ -190,14 +190,13 @@ switch ($action) {
 
     case 'getselectinstructorgroupoptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $gid = required_param('filterid', PARAM_INT); // group id
+        $gid = required_param('filterid', PARAM_INT); // Group ID.
         $instructorgroupoptions = [];
         $learnergroup = $apiclient->get_by_id($accesstoken, 'learnerGroups', $gid);
         if (!empty($learnergroup->instructorGroups)) {
             $instructorgroups = $apiclient->get(
                     $accesstoken,
                     'instructorGroups',
-                    // array("id" => $learnergroup->instructorGroups),
                      '',
                     ["title" => "ASC"]
             );

@@ -24,27 +24,32 @@
 
 namespace enrol_ilios\task;
 
-defined('MOODLE_INTERNAL') || die;
+use coding_exception;
+use core\task\scheduled_task;
 
 /**
  * Simple task to run sync enrolments.
  *
+ * @package    enrol_ilios
  * @copyright  2018 The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class ilios_sync_task extends \core\task\scheduled_task {
+class ilios_sync_task extends scheduled_task {
 
     /**
-     * @inheritdoc
+     * Gets the task name.
+     *
+     * @return string The task name.
+     * @throws coding_exception
      */
     public function get_name() {
         return get_string('iliossync', 'enrol_ilios');
     }
 
     /**
-     * @inheritdoc
+     * Executes the task.
      */
-    public function execute() {
+    public function execute(): void {
         global $CFG;
 
         require_once($CFG->dirroot . '/enrol/ilios/lib.php');
@@ -54,8 +59,6 @@ class ilios_sync_task extends \core\task\scheduled_task {
         }
 
         $plugin = enrol_get_plugin('ilios');
-        $result = $plugin->sync(new \text_progress_trace());
-        return $result;
-
+        $plugin->sync(new \text_progress_trace());
     }
 }

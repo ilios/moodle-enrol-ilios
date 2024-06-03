@@ -61,11 +61,11 @@ if ($instanceid) {
     $instance->id          = null;
     $instance->courseid    = $course->id;
     $instance->enrol       = 'ilios';
-    $instance->customchar1 = '';  // cohort / learnerGroup
-    $instance->customint1  = 0;   // cohort / leaner group id.
-    $instance->customint2  = 0;   // 0 - learner /  1 - instructor
-    $instance->customtext1 = '';  // json string of all useful values
-    $instance->customint6  = 0;   // group id.
+    $instance->customchar1 = '';  // Cohort / learnerGroup.
+    $instance->customint1  = 0;   // Cohort / leaner group id.
+    $instance->customint2  = 0;   // Learner = 0, Instructor = 1.
+    $instance->customtext1 = '';  // JSON string of all useful values.
+    $instance->customint6  = 0;   // Group ID.
 }
 
 // Try and make the manage instances node on the navigation active.
@@ -125,7 +125,14 @@ if ($mform->is_cancelled()) {
         // NOTE: no cohort or learner group changes here!!!
         if ($data->roleid != $instance->roleid) {
             // The sync script can only add roles, for perf reasons it does not modify them.
-            role_unassign_all(['contextid' => $context->id, 'roleid' => $instance->roleid, 'component' => 'enrol_ilios', 'itemid' => $instance->id]);
+            role_unassign_all(
+                [
+                    'contextid' => $context->id,
+                    'roleid' => $instance->roleid,
+                    'component' => 'enrol_ilios',
+                    'itemid' => $instance->id,
+                ]
+            );
         }
 
         $instance->name         = $data->name;
@@ -140,13 +147,19 @@ if ($mform->is_cancelled()) {
 
         $DB->update_record('enrol', $instance);
     } else {
-        $enrol->add_instance($course, ['name' => $data->name, 'status' => $data->status,
-                                            'customchar1' => $synctype,
-                                            'customint1' => $syncid,
-                                            'customtext1' => json_encode($syncinfo),
-                                            'roleid' => $data->roleid,
-                                            'customint2' => $data->selectusertype,
-                                            'customint6' => $data->customint6]);
+        $enrol->add_instance(
+            $course,
+            [
+                'name' => $data->name,
+                'status' => $data->status,
+                'customchar1' => $synctype,
+                'customint1' => $syncid,
+                'customtext1' => json_encode($syncinfo),
+                'roleid' => $data->roleid,
+                'customint2' => $data->selectusertype,
+                'customint6' => $data->customint6,
+            ],
+        );
     }
 
     $trace = new null_progress_trace();
