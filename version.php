@@ -25,12 +25,12 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2024053100;       // The current plugin version (Date: YYYYMMDDXX)
-$plugin->requires  = 2023100400;       // Requires this Moodle version
-$plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics)
+$plugin->version   = 2024053100;       // The current plugin version (Date: YYYYMMDDXX).
+$plugin->requires  = 2023100400;       // Requires this Moodle version.
+$plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics).
 $plugin->release = 'v4.3';
 $plugin->supported = [403, 403];
 $plugin->maturity = MATURITY_STABLE;
-$plugin->dependencies = array(
+$plugin->dependencies = [
     'local_iliosapiclient' => 2024032200,
-);
+];
