@@ -5,6 +5,8 @@ on:
   pull_request:
   schedule:
     - cron: '33 2 * * 1' # weekly, on Monday morning
+env:
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_ILIOS_DEPLOYMENT_WEBHOOK_URL }}
 
 jobs:
   test:
@@ -26,8 +28,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - php: '8.2'
+          - php: '8.3'
             moodle-branch: 'main'
+            database: 'mariadb'
+          - php: '8.3'
+            moodle-branch: 'MOODLE_404_STABLE'
             database: 'mariadb'
           - php: '8.2'
             moodle-branch: 'MOODLE_403_STABLE'
@@ -107,3 +112,9 @@ jobs:
       - name: Mark cancelled jobs as failed.
         if: ${{ cancelled() }}
         run: exit 1
+
+      - uses: act10ns/slack@v2.0.0
+        with:
+          status: ${{ job.status }}
+          message: Moodle Plugin CI failed {{ env.GITHUB_SERVER_URL }}/{{ env.GITHUB_REPOSITORY }}/actions/runs/{{ env.GITHUB_RUN_ID }}
+        if: failure()
