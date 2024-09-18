@@ -26,6 +26,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\di;
+use enrol_ilios\ilios;
+
 define('AJAX_SCRIPT', true);
 
 require('../../config.php');
@@ -63,15 +66,17 @@ $outcome->success = true;
 $outcome->response = new stdClass();
 $outcome->error = '';
 
-/** @var enrol_ilios_plugin $enrol */
-$enrol = enrol_get_plugin('ilios');
-$apiclient = $enrol->get_api_client();
-$accesstoken = $enrol->get_api_access_token();
+try {
+    $ilios = di::get(ilios::class);
+} catch (Exception $e) {
+    // Re-throw exception.
+    throw new Exception('ERROR: Failed to instantiate Ilios client.', $e);
+}
 
 switch ($action) {
     case 'getselectschooloptions':
         require_capability('moodle/course:enrolconfig', $context);
-        $schools = $apiclient->get($accesstoken, 'schools', '', ['title' => "ASC"]);
+        $schools = $ilios->get_schools(['title' => "ASC"]);
         $schoolarray = [];
         foreach ($schools as $school) {
             $schoolarray["$school->id:$school->title"] = $school->title;
@@ -83,7 +88,7 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $sid = required_param('filterid', PARAM_INT); // School ID.
         $programs = [];
-        $programs = $apiclient->get($accesstoken, 'programs', ['school' => $sid], ['title' => "ASC"]);
+        $programs = $ilios->get_programs(['school' => $sid], ['title' => "ASC"]);
         $programarray = [];
         foreach ($programs as $program) {
             $key = $program->id;
@@ -101,12 +106,7 @@ switch ($action) {
     case 'getselectcohortoptions':
         require_capability('moodle/course:enrolconfig', $context);
         $pid = required_param('filterid', PARAM_INT);
-        $programyears = $apiclient->get(
-                $accesstoken,
-                'programYears',
-                ["program" => $pid],
-                ["startYear" => "ASC"]
-        );
+        $programyears = $ilios->get_program_years(["program" => $pid], ["startYear" => "ASC"]);
         $programyeararray = [];
         $cohortoptions = [];
         foreach ($programyears as $progyear) {
@@ -114,12 +114,7 @@ switch ($action) {
         }
 
         if (!empty($programyeararray)) {
-            $cohorts = $apiclient->get(
-                    $accesstoken,
-                    'cohorts',
-                    ["programYear" => $programyeararray],
-                    ["title" => "ASC"]
-            );
+            $cohorts = $ilios->get_cohorts(["programYear" => $programyeararray], ["title" => "ASC"]);
             foreach ($cohorts as $cohort) {
                 $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
                                                              .' ('.count($cohort->learnerGroups).')'
@@ -133,12 +128,7 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $cid = required_param('filterid', PARAM_INT);    // Cohort ID.
         $usertype = optional_param('usertype', 0, PARAM_INT); // Learner or instructor.
-        $learnergroups = $apiclient->get(
-                $accesstoken,
-                'learnerGroups',
-                ['cohort' => $cid, 'parent' => 'null'],
-                ['title' => "ASC"]
-        );
+        $learnergroups = $ilios->get_learner_groups(['cohort' => $cid, 'parent' => 'null'], ['title' => "ASC"]);
         $grouparray = [];
         foreach ($learnergroups as $group) {
             $grouparray["$group->id:$group->title"] = $group->title.
@@ -153,25 +143,15 @@ switch ($action) {
         $gid = required_param('filterid', PARAM_INT);    // Group ID.
         $usertype = optional_param('usertype', 0, PARAM_INT); // Learner or instructor.
         $subgroupoptions = [];
-        $subgroups = $apiclient->get(
-                $accesstoken,
-                'learnerGroups',
-                ["parent" => $gid],
-                ["title" => "ASC"]
-        );
+        $subgroups = $ilios->get_learner_groups(["parent" => $gid], ["title" => "ASC"]);
         foreach ($subgroups as $subgroup) {
             $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
                                                                ' ('. count($subgroup->children) .')';
             $subgroupoptions["$subgroup->id:$subgroup->title"] .= ' ('. count($subgroup->users) .')';
 
             if (!empty($subgroup->children)) {
-                $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $apiclient, $accesstoken) {
-                    $subgrps = $apiclient->get(
-                            $accesstoken,
-                            'learnerGroups',
-                            [ 'parent' => $parent->id],
-                            [ 'title' => "ASC"]
-                    );
+                $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $ilios) {
+                    $subgrps = $ilios->get_learner_groups([ 'parent' => $parent->id], [ 'title' => "ASC"]);
                     foreach ($subgrps as $subgrp) {
                         $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
                                                                                         ' ('. count($subgrp->children) .')';
@@ -192,14 +172,9 @@ switch ($action) {
         require_capability('moodle/course:enrolconfig', $context);
         $gid = required_param('filterid', PARAM_INT); // Group ID.
         $instructorgroupoptions = [];
-        $learnergroup = $apiclient->get_by_id($accesstoken, 'learnerGroups', $gid);
+        $learnergroup = $ilios->get_learner_group('learnerGroups', $gid);
         if (!empty($learnergroup->instructorGroups)) {
-            $instructorgroups = $apiclient->get(
-                    $accesstoken,
-                    'instructorGroups',
-                     '',
-                    ["title" => "ASC"]
-            );
+            $instructorgroups = $ilios->get_instructor_groups(sortby: ["title" => "ASC"]);
             foreach ($instructorgroups as $instructorgroup) {
                 $instructorgroupoptions["$instructorgroup->id:$instructorgroup->title"] = $instructorgroup->title.
                                                                                         ' ('. count($instructorgroup->users) .')';
