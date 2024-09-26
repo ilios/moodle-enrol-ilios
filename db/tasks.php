@@ -18,7 +18,7 @@
  * Definition of Ilios enrolment scheduled tasks.
  *
  * @package    enrol_ilios
- * @copyright  2018 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

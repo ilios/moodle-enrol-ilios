@@ -18,7 +18,7 @@
  * Scheduled task for processing Ilios enrolments.
  *
  * @package    enrol_ilios
- * @copyright  2018 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -31,7 +31,7 @@ use core\task\scheduled_task;
  * Simple task to run sync enrolments.
  *
  * @package    enrol_ilios
- * @copyright  2018 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class ilios_sync_task extends scheduled_task {
