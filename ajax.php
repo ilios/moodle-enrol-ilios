@@ -22,7 +22,7 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
