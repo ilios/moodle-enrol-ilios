@@ -416,6 +416,16 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
                 }
 
+                // Unenrol as necessary.
+                $trace->output(
+                    "Unenrolling users from Course ID "
+                    . $instance->courseid." with Role ID "
+                    . $instance->roleid
+                    . " that no longer associate with Ilios Sync ID "
+                    . $instance->id
+                    . "."
+                );
+
                 $sql = "SELECT ue.*
                       FROM {user_enrolments} ue
                       WHERE ue.enrolid = $instance->id";
