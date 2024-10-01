@@ -412,34 +412,19 @@ class enrol_ilios_plugin extends enrol_plugin {
                         . " via Ilios $synctype $syncid"
                         , 1
                     );
-                    $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
-                }
-
-                // Unenrol as necessary.
-                $trace->output(
-                    "Unenrolling users from Course ID "
-                    . $instance->courseid." with Role ID "
-                    . $instance->roleid
-                    . " that no longer associate with Ilios Sync ID "
-                    . $instance->id
-                    . "."
-                );
-
-                $sql = "SELECT ue.*
-                      FROM {user_enrolments} ue
-                      WHERE ue.enrolid = $instance->id";
-
-                if (!empty($enrolleduserids)) {
-                    $sql .= " AND ue.userid NOT IN ( ".implode(",", $enrolleduserids)." )";
-                }
-
-                $rs = $DB->get_recordset_sql($sql);
-                foreach ($rs as $ue) {
-                    if ($unenrolaction == ENROL_EXT_REMOVED_UNENROL) {
-                        // Remove enrolment together with group membership, grades, preferences, etc.
-                        $this->unenrol_user($instance, $ue->userid);
+                } else { // Would be ENROL_EXT_REMOVED_SUSPENDNOROLES.
+                    // Just disable and ignore any changes.
+                    if ($ue->status != ENROL_USER_SUSPENDED) {
+                        $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
+                        $context = context_course::instance($instance->courseid);
+                        role_unassign_all([
+                            'userid' => $ue->userid,
+                            'contextid' => $context->id,
+                            'component' => 'enrol_ilios',
+                            'itemid' => $instance->id,
+                        ]);
                         $trace->output(
-                            "suspending and unsassigning all roles: userid "
+                            "suspending and unassigning all roles: userid "
                             . $ue->userid
                             . " ==> courseid "
                             . $instance->courseid
