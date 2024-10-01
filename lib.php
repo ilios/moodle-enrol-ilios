@@ -283,17 +283,19 @@ class enrol_ilios_plugin extends enrol_plugin {
 
             $users = [];
 
-            if (!empty($instance->customint2) && !empty($group->instructors)) {
-                $trace->output(
-                    "Enrolling instructors to Course ID "
-                    . $instance->courseid
-                    . " with Role ID "
-                    . $instance->roleid
-                    . " through Ilios Sync ID "
-                    . $instance->id
-                    . "."
-                );
-                $users = $apiclient->get_by_ids($accesstoken, 'users', $group->instructors);
+            if (!empty($instance->customint2)) {
+                if (!empty($group->instructors)) {
+                    $trace->output(
+                        "Enrolling instructors to Course ID "
+                        . $instance->courseid
+                        . " with Role ID "
+                        . $instance->roleid
+                        . " through Ilios Sync ID "
+                        . $instance->id
+                        . "."
+                    );
+                    $users = $apiclient->get_by_ids($accesstoken, 'users', $group->instructors);
+                }
             } else if (!empty($group->users)) {
                 $trace->output(
                     "Enrolling students to Course ID "
