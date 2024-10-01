@@ -766,7 +766,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             $offerings = $apiclient->get_by_ids($accesstoken, 'offerings', $group->offerings);
 
             foreach ($offerings as $offering) {
-                if (empty($offering->instructors)) {
+                if (empty($offering->instructors) && empty($offering->instructorGroups)) {
                     // No instructor AND no instructor groups have been set for this offering.
                     // Fall back to the default instructors/instructor-groups defined for the learner group.
                     $instructorids = array_merge($instructorids, $group->instructors);
