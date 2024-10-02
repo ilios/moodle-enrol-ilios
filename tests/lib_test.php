@@ -263,7 +263,7 @@ final class lib_test extends \advanced_testcase {
 
         // Run enrolment sync.
         $trace = new progress_trace_buffer(new text_progress_trace(), false);
-        $plugin->sync($trace, null);
+        $this->assertEquals(0, $plugin->sync($trace, null));
         $output = $trace->get_buffer();
         $trace->finished();
         $trace->reset_buffer();
@@ -605,7 +605,7 @@ final class lib_test extends \advanced_testcase {
 
         // Run enrolment sync.
         $trace = new progress_trace_buffer(new text_progress_trace(), false);
-        $plugin->sync($trace, null);
+        $this->assertEquals(0, $plugin->sync($trace, null));
         $output = $trace->get_buffer();
         $trace->finished();
         $trace->reset_buffer();
@@ -1006,7 +1006,7 @@ final class lib_test extends \advanced_testcase {
 
         // Run enrolment sync.
         $trace = new progress_trace_buffer(new text_progress_trace(), false);
-        $plugin->sync($trace, null);
+        $this->assertEquals(0, $plugin->sync($trace, null));
         $output = $trace->get_buffer();
         $trace->finished();
         $trace->reset_buffer();
