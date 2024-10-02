@@ -35,6 +35,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use moodle_exception;
 use enrol_ilios\tests\helper;
+use Psr\Http\Message\RequestInterface;
 
 /**
  * Tests the Ilios API client.
@@ -58,13 +59,17 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'schools' => [
-                    ['id' => 1, 'title' => 'Medicine', 'programs' => ['2', '4']],
-                    ['id' => 2, 'title' => 'Pharmacy', 'programs' => ['3', '5']],
-                ],
-            ])),
+            function(RequestInterface $request) {
+                $this->assertEquals('/api/v3/schools', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'schools' => [
+                        ['id' => 1, 'title' => 'Medicine', 'programs' => ['2', '4']],
+                        ['id' => 2, 'title' => 'Pharmacy', 'programs' => ['3', '5']],
+                    ],
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -89,27 +94,31 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'cohorts' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Class of 2023',
-                        'programYear' => 1,
-                        'courses' => ['3'],
-                        'users' => ['1', '2'],
-                        'learnerGroups' => ['5', '8'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/cohorts', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Class of 2023',
+                            'programYear' => 1,
+                            'courses' => ['3'],
+                            'users' => ['1', '2'],
+                            'learnerGroups' => ['5', '8'],
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Class of 2024',
+                            'programYear' => 3,
+                            'courses' => [],
+                            'users' => [],
+                            'learnerGroups' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'title' => 'Class of 2024',
-                        'programYear' => 3,
-                        'courses' => [],
-                        'users' => [],
-                        'learnerGroups' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -140,25 +149,30 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'programs' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Doctor of Medicine - MD',
-                        'shortTitle' => 'MD',
-                        'school' => 1,
-                        'programYears' => ['1', '2'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/programs', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'programs' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Doctor of Medicine - MD',
+                            'shortTitle' => 'MD',
+                            'school' => 1,
+                            'programYears' => ['1', '2'],
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Doctor of Medicine - Bridges',
+                            'shortTitle' => 'Bridges',
+                            'school' => 2,
+                            'programYears' => ['3'],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'title' => 'Doctor of Medicine - Bridges',
-                        'shortTitle' => 'Bridges',
-                        'school' => 2,
-                        'programYears' => ['3'],
-                    ],
-                ],
-            ])),
+                ]));
+            },
+
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -187,23 +201,27 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'programYears' => [
-                    [
-                        'id' => 1,
-                        'startYear' => 2023,
-                        'program' => 1,
-                        'cohort' => 2,
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/programyears', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'programYears' => [
+                        [
+                            'id' => 1,
+                            'startYear' => 2023,
+                            'program' => 1,
+                            'cohort' => 2,
+                        ],
+                        [
+                            'id' => 2,
+                            'startYear' => 2024,
+                            'program' => 2,
+                            'cohort' => 3,
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'startYear' => 2024,
-                        'program' => 2,
-                        'cohort' => 3,
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -230,35 +248,39 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'learnerGroups' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Alpha',
-                        'cohort' => 1,
-                        'parent' => null,
-                        'children' => ['2'],
-                        'ilmSessions' => ['1', '2'],
-                        'offerings' => ['5', '6'],
-                        'instructorGroups' => ['3', '4', '5'],
-                        'instructors' => ['7'],
-                        'users' => ['4', '12'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/learnergroups', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'learnerGroups' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Alpha',
+                            'cohort' => 1,
+                            'parent' => null,
+                            'children' => ['2'],
+                            'ilmSessions' => ['1', '2'],
+                            'offerings' => ['5', '6'],
+                            'instructorGroups' => ['3', '4', '5'],
+                            'instructors' => ['7'],
+                            'users' => ['4', '12'],
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Beta',
+                            'cohort' => 2,
+                            'parent' => 1,
+                            'children' => [],
+                            'ilmSessions' => [],
+                            'offerings' => [],
+                            'instructorGroups' => [],
+                            'instructors' => [],
+                            'users' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'title' => 'Beta',
-                        'cohort' => 2,
-                        'parent' => 1,
-                        'children' => [],
-                        'ilmSessions' => [],
-                        'offerings' => [],
-                        'instructorGroups' => [],
-                        'instructors' => [],
-                        'users' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -297,29 +319,33 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'instructorGroups' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Anatomy Lab Instructors',
-                        'school' => 1,
-                        'learnerGroups' => ['8', '9'],
-                        'ilmSessions' => ['1', '2'],
-                        'offerings' => ['5', '6'],
-                        'users' => ['4', '12'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'instructorGroups' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Anatomy Lab Instructors',
+                            'school' => 1,
+                            'learnerGroups' => ['8', '9'],
+                            'ilmSessions' => ['1', '2'],
+                            'offerings' => ['5', '6'],
+                            'users' => ['4', '12'],
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Clinical Pharmacy Instructors',
+                            'school' => 2,
+                            'learnerGroups' => [],
+                            'ilmSessions' => [],
+                            'offerings' => [],
+                            'users' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'title' => 'Clinical Pharmacy Instructors',
-                        'school' => 2,
-                        'learnerGroups' => [],
-                        'ilmSessions' => [],
-                        'offerings' => [],
-                        'users' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -352,25 +378,29 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'offerings' => [
-                    [
-                        'id' => 1,
-                        'learnerGroups' => ['1', '2'],
-                        'instructorGroups' => ['2', '4'],
-                        'learners' => ['8', '9'],
-                        'instructors' => ['5', '6'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/offerings', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'offerings' => [
+                        [
+                            'id' => 1,
+                            'learnerGroups' => ['1', '2'],
+                            'instructorGroups' => ['2', '4'],
+                            'learners' => ['8', '9'],
+                            'instructors' => ['5', '6'],
+                        ],
+                        [
+                            'id' => 2,
+                            'learnerGroups' => [],
+                            'instructorGroups' => [],
+                            'learners' => [],
+                            'instructors' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'learnerGroups' => [],
-                        'instructorGroups' => [],
-                        'learners' => [],
-                        'instructors' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -399,25 +429,29 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'ilmSessions' => [
-                    [
-                        'id' => 1,
-                        'learnerGroups' => ['1', '2'],
-                        'instructorGroups' => ['2', '4'],
-                        'learners' => ['8', '9'],
-                        'instructors' => ['5', '6'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/ilmsessions', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'ilmSessions' => [
+                        [
+                            'id' => 1,
+                            'learnerGroups' => ['1', '2'],
+                            'instructorGroups' => ['2', '4'],
+                            'learners' => ['8', '9'],
+                            'instructors' => ['5', '6'],
+                        ],
+                        [
+                            'id' => 2,
+                            'learnerGroups' => [],
+                            'instructorGroups' => [],
+                            'learners' => [],
+                            'instructors' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'learnerGroups' => [],
-                        'instructorGroups' => [],
-                        'learners' => [],
-                        'instructors' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -446,21 +480,25 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'users' => [
-                    [
-                        'id' => 1,
-                        'enabled' => true,
-                        'campusId' => 'xx1000001',
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'users' => [
+                        [
+                            'id' => 1,
+                            'enabled' => true,
+                            'campusId' => 'xx1000001',
+                        ],
+                        [
+                            'id' => 2,
+                            'enabled' => false,
+                            'campusId' => 'xx1000002',
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'enabled' => false,
-                        'campusId' => 'xx1000002',
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -485,12 +523,16 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'schools' => [
-                    ['id' => 1, 'title' => 'Medicine', 'programs' => ['2', '4']],
-                ],
-            ])),
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/schools/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'schools' => [
+                        ['id' => 1, 'title' => 'Medicine', 'programs' => ['2', '4']],
+                    ],
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -531,19 +573,23 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'cohorts' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Class of 2023',
-                        'programYear' => 1,
-                        'courses' => ['3'],
-                        'users' => ['1', '2'],
-                        'learnerGroups' => ['5', '8'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Class of 2023',
+                            'programYear' => 1,
+                            'courses' => ['3'],
+                            'users' => ['1', '2'],
+                            'learnerGroups' => ['5', '8'],
+                        ],
                     ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -587,18 +633,22 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'programs' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Doctor of Medicine - MD',
-                        'shortTitle' => 'MD',
-                        'school' => 1,
-                        'programYears' => ['1', '2'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/programs/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'programs' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Doctor of Medicine - MD',
+                            'shortTitle' => 'MD',
+                            'school' => 1,
+                            'programYears' => ['1', '2'],
+                        ],
                     ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -641,35 +691,40 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'learnerGroups' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Alpha',
-                        'cohort' => 1,
-                        'parent' => null,
-                        'children' => ['2'],
-                        'ilmSessions' => ['1', '2'],
-                        'offerings' => ['5', '6'],
-                        'instructorGroups' => ['3', '4', '5'],
-                        'instructors' => ['7'],
-                        'users' => ['4', '12'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/learnergroups/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'learnerGroups' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Alpha',
+                            'cohort' => 1,
+                            'parent' => null,
+                            'children' => ['2'],
+                            'ilmSessions' => ['1', '2'],
+                            'offerings' => ['5', '6'],
+                            'instructorGroups' => ['3', '4', '5'],
+                            'instructors' => ['7'],
+                            'users' => ['4', '12'],
+                        ],
+                        [
+                            'id' => 2,
+                            'title' => 'Beta',
+                            'cohort' => 2,
+                            'parent' => 1,
+                            'children' => [],
+                            'ilmSessions' => [],
+                            'offerings' => [],
+                            'instructorGroups' => [],
+                            'instructors' => [],
+                            'users' => [],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'title' => 'Beta',
-                        'cohort' => 2,
-                        'parent' => 1,
-                        'children' => [],
-                        'ilmSessions' => [],
-                        'offerings' => [],
-                        'instructorGroups' => [],
-                        'instructors' => [],
-                        'users' => [],
-                    ],
-                ],
-            ])),
+                ]));
+            },
+
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -717,152 +772,191 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         // The user ids in the 900 range are users we don't want in the output.
         // All other user ids, 1-9 should be in the output of this function.
         // Some of these are assigned instructors in various ways, so we can verify that de-duping works.
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'learnerGroups' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Alpha',
-                        'cohort' => 1,
-                        'parent' => null,
-                        'children' => ['2', '3'],
-                        'ilmSessions' => ['1', '2'],
-                        'offerings' => ['1', '2'],
-                        'instructorGroups' => ['900'],
-                        'instructors' => ['900'],
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/learnergroups/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'learnerGroups' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Alpha',
+                            'cohort' => 1,
+                            'parent' => null,
+                            'children' => ['2', '3'],
+                            'ilmSessions' => ['1', '2'],
+                            'offerings' => ['1', '2'],
+                            'instructors' => ['900'],
+                            'instructorGroups' => ['900'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'offerings' => [
-                    [
-                        'id' => 1,
-                        'learnerGroups' => ['1'],
-                        'instructorGroups' => ['1'],
-                        'learners' => ['901', '902'],
-                        'instructors' => [],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/offerings', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=1&filters[id][]=2', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'offerings' => [
+                        [
+                            'id' => 1,
+                            'instructors' => [],
+                            'instructorGroups' => ['1'],
+                            'learners' => ['901', '902'],
+                            'learnerGroups' => ['1'],
+                        ],
+                        [
+                            'id' => 2,
+                            'instructors' => ['1'],
+                            'instructorGroups' => [],
+                            'learners' => ['903'],
+                            'learnerGroups' => ['1'],
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'learnerGroups' => ['1'],
-                        'instructorGroups' => ['901'],
-                        'learners' => ['903'],
-                        'instructors' => ['1'],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/ilmsessions', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=1&filters[id][]=2', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'ilmSessions' => [
+                        [
+                            'id' => 1,
+                            'instructors' => [],
+                            'instructorGroups' => ['1'],
+                            'learners' => ['901', '902'],
+                            'learnerGroups' => ['1'],
+                        ],
+                        [
+                            'id' => 2,
+                            'instructors' => ['1'],
+                            'instructorGroups' => [],
+                            'learners' => ['903'],
+                            'learnerGroups' => ['1'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'ilmSessions' => [
-                    [
-                        'id' => 1,
-                        'learnerGroups' => ['1'],
-                        'instructorGroups' => ['1'],
-                        'learners' => ['901', '902'],
-                        'instructors' => [],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/learnergroups/2', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'learnerGroups' => [
+                        [
+                            'id' => 2,
+                            'title' => 'Beta',
+                            'cohort' => 1,
+                            'parent' => 1,
+                            'children' => [],
+                            'ilmSessions' => [],
+                            'offerings' => ['3'],
+                            'instructors' => ['2'],
+                            'instructorGroups' => ['2'],
+
+                        ],
                     ],
-                    [
-                        'id' => 2,
-                        'learnerGroups' => ['1'],
-                        'instructorGroups' => [],
-                        'learners' => ['903'],
-                        'instructors' => ['1'],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/offerings', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'offerings' => [
+                        [
+                            'id' => 3,
+                            'instructors' => [],
+                            'instructorGroups' => [],
+                            'learners' => ['904'],
+                            'learnerGroups' => ['2'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'learnerGroups' => [
-                    [
-                        'id' => 2,
-                        'title' => 'Beta',
-                        'cohort' => 1,
-                        'parent' => 1,
-                        'children' => [],
-                        'ilmSessions' => [],
-                        'offerings' => ['3'],
-                        'instructorGroups' => ['2'],
-                        'instructors' => ['2'],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=2', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'instructorGroups' => [
+                        [
+                            'id' => 2,
+                            'title' => 'Zwei',
+                            'school' => 1,
+                            'learnerGroups' => ['2'],
+                            'ilmSessions' => [],
+                            'offerings' => [],
+                            'users' => ['6', '7'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'offerings' => [
-                    [
-                        'id' => 3,
-                        'learnerGroups' => ['2'],
-                        'instructorGroups' => [],
-                        'learners' => ['904'],
-                        'instructors' => [],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/learnergroups/3', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'learnerGroups' => [
+                        [
+                            'id' => 3,
+                            'title' => 'Gamma',
+                            'cohort' => 1,
+                            'parent' => 1,
+                            'children' => [],
+                            'ilmSessions' => ['3'],
+                            'offerings' => [],
+                            'instructors' => ['3'],
+                            'instructorGroups' => ['3'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'instructorGroups' => [
-                    [
-                        'id' => 2,
-                        'title' => 'Zwei',
-                        'school' => 1,
-                        'learnerGroups' => ['2'],
-                        'ilmSessions' => [],
-                        'offerings' => [],
-                        'users' => ['6', '7'],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/ilmsessions', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'ilmSessions' => [
+                        [
+                            'id' => 3,
+                            'instructors' => [],
+                            'instructorGroups' => [],
+                            'learners' => ['905'],
+                            'learnerGroups' => ['2'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'learnerGroups' => [
-                    [
-                        'id' => 3,
-                        'title' => 'Gamma',
-                        'cohort' => 1,
-                        'parent' => 1,
-                        'children' => [],
-                        'ilmSessions' => ['3'],
-                        'offerings' => [],
-                        'instructorGroups' => ['3'],
-                        'instructors' => ['3'],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'instructorGroups' => [
+                        [
+                            'id' => 3,
+                            'title' => 'Drei',
+                            'school' => 1,
+                            'learnerGroups' => [],
+                            'ilmSessions' => [],
+                            'offerings' => ['1'],
+                            'users' => ['8', '9'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'ilmSessions' => [
-                    [
-                        'id' => 3,
-                        'learnerGroups' => ['2'],
-                        'instructorGroups' => [],
-                        'learners' => ['905'],
-                        'instructors' => [],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
+                $this->assertEquals('filters[id][]=1', urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode([
+                    'instructorGroups' => [
+                        [
+                            'id' => 1,
+                            'title' => 'Eins',
+                            'school' => 1,
+                            'learnerGroups' => [],
+                            'ilmSessions' => ['1'],
+                            'offerings' => ['1'],
+                            'users' => ['4', '5'],
+                        ],
                     ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'instructorGroups' => [
-                    [
-                        'id' => 3,
-                        'title' => 'Drei',
-                        'school' => 1,
-                        'learnerGroups' => [],
-                        'ilmSessions' => [],
-                        'offerings' => ['1'],
-                        'users' => ['8', '9'],
-                    ],
-                ],
-            ])),
-            new Response(200, [], json_encode([
-                'instructorGroups' => [
-                    [
-                        'id' => 1,
-                        'title' => 'Eins',
-                        'school' => 1,
-                        'learnerGroups' => [],
-                        'ilmSessions' => ['1'],
-                        'offerings' => ['1'],
-                        'users' => ['4', '5'],
-                    ],
-                ],
-            ])),
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -881,13 +975,19 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode([
-                'schools' => [
-                    ['id' => 1, 'title' => 'Medicine'],
-                    ['id' => 2, 'title' => 'Pharmacy'],
-                ],
-            ])),
+            function (RequestInterface $request) {
+                $this->assertEquals('GET', $request->getMethod());
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/schools', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'schools' => [
+                        ['id' => 1, 'title' => 'Medicine'],
+                        ['id' => 2, 'title' => 'Pharmacy'],
+                    ],
+                ]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
@@ -919,17 +1019,13 @@ final class ilios_test extends advanced_testcase {
         set_config('apikey', $accesstoken, 'enrol_ilios');
         set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
 
-        $mockclient = $this->createMock(http_client::class);
-        $mockclient
-            ->expects($this->once())
-            ->method('get')
-            ->with(
-                $this->equalTo('http://ilios.demo/api/v3/geflarkniks' . $expectedquerystring),
-                $this->anything(),
-            )
-            ->willReturn(new Response(200, [], json_encode(['geflarkniks' => [['doesnt-really' => 'matter']]])));
-
-        di::set(http_client::class, $mockclient);
+        $handlerstack = HandlerStack::create(new MockHandler([
+            function (RequestInterface $request) use ($expectedquerystring)  {
+                $this->assertEquals($expectedquerystring, urldecode($request->getUri()->getQuery()));
+                return new Response(200, [], json_encode(['geflarkniks' => [['doesnt-really' => 'matter']]]));
+            },
+        ]));
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
         $ilios->get('geflarkniks', $filterby, $sortby);
     }
@@ -943,12 +1039,12 @@ final class ilios_test extends advanced_testcase {
     public static function get_with_filtering_and_sorting_provider(): array {
         return [
             [[], [], ''],
-            [['foo' => 'bar'], [], '?filters[foo]=bar'],
-            [[], ['name' => 'DESC'], '?order_by[name]=DESC'],
+            [['foo' => 'bar'], [], 'filters[foo]=bar'],
+            [[], ['name' => 'DESC'], 'order_by[name]=DESC'],
             [
                 ['id' => [1, 2], 'school' => 5],
                 ['title' => 'ASC'],
-                '?filters[id][]=1&filters[id][]=2&filters[school]=5&order_by[title]=ASC',
+                'filters[id][]=1&filters[id][]=2&filters[school]=5&order_by[title]=ASC',
             ],
         ];
     }
@@ -961,18 +1057,23 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+
         $handlerstack = HandlerStack::create(new MockHandler([
-            new Response(200, [], json_encode(['geflarknik' => [
-                ['id' => 1, 'title' => 'whatever'],
-            ]])),
+            function(RequestInterface $request) {
+                $this->assertEquals('/api/v3/geflarkniks/12345', $request->getUri()->getPath());
+                return new Response(200, [], json_encode(['geflarkniks' => [
+                    ['id' => 1, 'title' => 'whatever'],
+                ]]));
+            },
         ]));
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
         $ilios = di::get(ilios::class);
-        $response = $ilios->get_by_id('does-not-matter-here', 12345);
-        $this->assertObjectHasProperty('geflarknik', $response);
-        $this->assertCount(1, $response->geflarknik);
-        $this->assertEquals('1', $response->geflarknik[0]->id);
-        $this->assertEquals('whatever', $response->geflarknik[0]->title);
+        $response = $ilios->get_by_id('geflarkniks', 12345);
+        $this->assertObjectHasProperty('geflarkniks', $response);
+        $this->assertCount(1, $response->geflarkniks);
+        $this->assertEquals('1', $response->geflarkniks[0]->id);
+        $this->assertEquals('whatever', $response->geflarkniks[0]->title);
     }
 
     /**
@@ -982,6 +1083,8 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+
         $handlerstack = HandlerStack::create(new MockHandler([
             new Response(404, []),
         ]));
@@ -1000,6 +1103,7 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+
         $handlerstack = HandlerStack::create(new MockHandler([
             new Response(404, []),
         ]));
@@ -1018,6 +1122,7 @@ final class ilios_test extends advanced_testcase {
     public function test_get_fails_on_garbled_response(): void {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
+
         set_config('apikey', $accesstoken, 'enrol_ilios');
         $handlerstack = HandlerStack::create(new MockHandler([
             new Response(200, [], 'g00bleG0bble'),
@@ -1039,6 +1144,7 @@ final class ilios_test extends advanced_testcase {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
+
         $handlerstack = HandlerStack::create(new MockHandler([
             new Response(200, [], ''),
         ]));
@@ -1223,4 +1329,3 @@ final class ilios_test extends advanced_testcase {
         ];
     }
 }
-
