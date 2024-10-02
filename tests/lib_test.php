@@ -32,7 +32,6 @@ use enrol_ilios\tests\helper;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
-use null_progress_trace;
 use progress_trace_buffer;
 use Psr\Http\Message\RequestInterface;
 use text_progress_trace;
@@ -280,7 +279,8 @@ final class lib_test extends \advanced_testcase {
             $output
         );
         $this->assertStringContainsString(
-            "changing enrollment status to '". ENROL_USER_ACTIVE . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
+            "changing enrollment status to '". ENROL_USER_ACTIVE
+            . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
             $output
         );
         $this->assertEquals(1, substr_count($output, 'changing enrollment status'));
@@ -623,7 +623,8 @@ final class lib_test extends \advanced_testcase {
         );
         $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
         $this->assertStringContainsString(
-            "changing enrollment status to '". ENROL_USER_ACTIVE . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
+            "changing enrollment status to '". ENROL_USER_ACTIVE
+            . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
             $output
         );
         $this->assertEquals(1, substr_count($output, 'changing enrollment status'));
@@ -1072,5 +1073,42 @@ final class lib_test extends \advanced_testcase {
             );
             $this->assertEquals(ENROL_USER_ACTIVE, $userenrolment->status);
         }
+    }
+
+    /**
+     * Test that nothing happens when Ilios enrolment is not enabled.
+     */
+    public function test_sync_disabled(): void {
+        global $DB;
+        $this->resetAfterTest();
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Create a course and set-up student-enrollment for it. Details beyond that don't really matter here.
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+        $course = $this->getDataGenerator()->create_course();
+        $plugin->add_instance($course, [
+                'customint1' => 1,
+                'customint2' => 0,
+                'customchar1' => 'learnerGroup',
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $this->assertEquals(1, $DB->count_records('enrol', ['enrol' => 'ilios']));
+        $this->assertNotNull($DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*'));
+
+        // Run the sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(2, $plugin->sync($trace, null)); // Note the non-zero exit code here.
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        $this->assertEquals(
+            'Ilios enrolment sync plugin is disabled, unassigning all plugin roles and stopping.',
+            trim($output)
+        );
     }
 }
