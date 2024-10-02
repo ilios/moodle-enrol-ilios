@@ -69,7 +69,7 @@ final class lib_test extends \advanced_testcase {
                     'cohorts' => [
                         [
                             'id' => 1,
-                            'users' => ['2', '3', '4', '5'],
+                            'users' => ['2', '3', '4', '5', '6'],
                         ],
                     ],
                 ]));
@@ -77,7 +77,7 @@ final class lib_test extends \advanced_testcase {
             function (RequestInterface $request) {
                 $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
                 $this->assertEquals(
-                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5',
+                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
                     urldecode($request->getUri()->getQuery())
                 );
                 return new Response(200, [], json_encode([
@@ -102,6 +102,11 @@ final class lib_test extends \advanced_testcase {
                             'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
                             'enabled' => true,
                         ],
+                        [
+                            'id' => 6,
+                            'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
+                            'enabled' => true,
+                        ],
                     ],
                 ]));
             },
@@ -123,6 +128,7 @@ final class lib_test extends \advanced_testcase {
         $user3 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000003']);
         $user4 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000004']);
         $user5 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000005']);
+        $user6 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000006']);
 
         $this->assertEquals(0, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $this->assertEquals(
@@ -158,15 +164,18 @@ final class lib_test extends \advanced_testcase {
         // Enable the enrolment method.
         $CFG->enrol_plugins_enabled = 'ilios';
 
-        // Enroll users 1-4, but not 5.
+        // Enroll users 1-4 and 6, but not 5.
         $plugin->enrol_user($instance, $user1->id, $studentrole->id);
         $plugin->enrol_user($instance, $user2->id, $studentrole->id);
         $plugin->enrol_user($instance, $user3->id, $studentrole->id);
         $plugin->enrol_user($instance, $user4->id, $studentrole->id);
+        $plugin->enrol_user($instance, $user6->id, $studentrole->id);
+        // Suspend enrolment of user 6.
+        $plugin->update_user_enrol($instance, $user6->id, ENROL_USER_SUSPENDED);
 
         // Check user enrolments pre-sync.
         $this->assertEquals(
-            4,
+            5,
             $DB->count_records(
                 'role_assignments',
                 [
@@ -176,7 +185,7 @@ final class lib_test extends \advanced_testcase {
                 ]
             )
         );
-        $this->assertEquals(4, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertEquals(5, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
 
         // Users 1 - 4 are actively enrolled in the course.
         foreach ([$user1, $user2, $user3, $user4] as $user) {
@@ -192,15 +201,17 @@ final class lib_test extends \advanced_testcase {
                     strictness: MUST_EXIST
                 )
             );
-            $userenrolment = $DB->get_record(
+            $this->assertNotEmpty(
+                $DB->get_record(
                     'user_enrolments',
                     [
                         'enrolid' => $instance->id,
                         'userid' => $user->id,
+                        'status' => ENROL_USER_ACTIVE,
                     ],
                     strictness: MUST_EXIST
+                )
             );
-            $this->assertEquals(ENROL_USER_ACTIVE, $userenrolment->status);
         }
 
         // Verify that user 5 is not enrolled.
@@ -225,6 +236,31 @@ final class lib_test extends \advanced_testcase {
             )
         );
 
+        // Verify that user 6 has a suspended user enrolment.
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user6->id,
+                    'contextid' => $context->id,
+                ],
+                strictness: MUST_EXIST,
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user6->id,
+                    'status' => ENROL_USER_SUSPENDED,
+                ],
+                strictness: MUST_EXIST,
+            )
+        );
+
         // Run enrolment sync.
         $trace = new progress_trace_buffer(new text_progress_trace(), false);
         $plugin->sync($trace, null);
@@ -238,11 +274,16 @@ final class lib_test extends \advanced_testcase {
                 . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
                 $output
         );
-        $this->assertStringContainsString('4 Ilios users found.', $output);
+        $this->assertStringContainsString('5 Ilios users found.', $output);
         $this->assertStringContainsString(
             'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user5->id} ==> courseid {$course->id}",
             $output
         );
+        $this->assertStringContainsString(
+            "changing enrollment status to '". ENROL_USER_ACTIVE . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'changing enrollment status'));
         $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
         $this->assertStringContainsString(
             "Suspending enrollment for disabled Ilios user: userid  {$user4->id} ==> courseid {$course->id}.",
@@ -267,7 +308,7 @@ final class lib_test extends \advanced_testcase {
 
         // Check user enrolments post-sync.
         $this->assertEquals(
-            3,
+            4,
             $DB->count_records(
                 'role_assignments',
                 [
@@ -277,10 +318,10 @@ final class lib_test extends \advanced_testcase {
                 ]
             )
         );
-        $this->assertEquals(4, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertEquals(5, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
 
-        // User 2, 3, and now 5, are actively enrolled as students in the course.
-        foreach ([$user2, $user3, $user5] as $user) {
+        // User 2, 3, and now 5 and 6, are actively enrolled as students in the course.
+        foreach ([$user2, $user3, $user5, $user6] as $user) {
             $this->assertNotEmpty(
                 $DB->get_record(
                     'role_assignments',
@@ -298,10 +339,10 @@ final class lib_test extends \advanced_testcase {
                 [
                     'enrolid' => $instance->id,
                     'userid' => $user->id,
+                    'status' => ENROL_USER_ACTIVE,
                 ],
                 strictness: MUST_EXIST
             );
-            $this->assertEquals(ENROL_USER_ACTIVE, $userenrolment->status);
         }
         // Verify that user1 has been fully unenrolled and has no role assigment in the course.
         $this->assertEmpty(
@@ -368,7 +409,7 @@ final class lib_test extends \advanced_testcase {
                     'learnerGroups' => [
                         [
                             'id' => 1,
-                            'users' => ['2', '3', '4', '5'],
+                            'users' => ['2', '3', '4', '5', '6'],
                         ],
                     ],
                 ]));
@@ -376,7 +417,7 @@ final class lib_test extends \advanced_testcase {
             function (RequestInterface $request) {
                 $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
                 $this->assertEquals(
-                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5',
+                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
                     urldecode($request->getUri()->getQuery())
                 );
                 return new Response(200, [], json_encode([
@@ -401,6 +442,12 @@ final class lib_test extends \advanced_testcase {
                             'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
                             'enabled' => true,
                         ],
+                        [
+                            'id' => 6,
+                            'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
+                            'enabled' => true,
+                        ],
+
                     ],
                 ]));
             },
@@ -423,6 +470,7 @@ final class lib_test extends \advanced_testcase {
         $user3 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000003']);
         $user4 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000004']);
         $user5 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000005']);
+        $user6 = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000006']);
 
         $this->assertEquals(0, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $this->assertEquals(
@@ -458,15 +506,18 @@ final class lib_test extends \advanced_testcase {
         // Enable the enrolment method.
         $CFG->enrol_plugins_enabled = 'ilios';
 
-        // Enroll users 1-4, but not 5.
+        // Enroll users 1-4 and 6, but not 5.
         $plugin->enrol_user($instance, $user1->id, $studentrole->id);
         $plugin->enrol_user($instance, $user2->id, $studentrole->id);
         $plugin->enrol_user($instance, $user3->id, $studentrole->id);
         $plugin->enrol_user($instance, $user4->id, $studentrole->id);
+        $plugin->enrol_user($instance, $user6->id, $studentrole->id);
+        // Suspend enrolment of user 6.
+        $plugin->update_user_enrol($instance, $user6->id, ENROL_USER_SUSPENDED);
 
         // Check user enrolments pre-sync.
         $this->assertEquals(
-            4,
+            5,
             $DB->count_records(
                 'role_assignments',
                 [
@@ -476,9 +527,9 @@ final class lib_test extends \advanced_testcase {
                 ]
             )
         );
-        $this->assertEquals(4, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertEquals(5, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
 
-        // Users 1 - 4 are actively enrolled in the course.
+        // Users 1 - 4 actively enrolled in the course.
         foreach ([$user1, $user2, $user3, $user4] as $user) {
             $this->assertNotEmpty(
                 $DB->get_record(
@@ -492,15 +543,17 @@ final class lib_test extends \advanced_testcase {
                     strictness: MUST_EXIST
                 )
             );
-            $userenrolment = $DB->get_record(
-                'user_enrolments',
-                [
-                    'enrolid' => $instance->id,
-                    'userid' => $user->id,
-                ],
-                strictness: MUST_EXIST
+            $this->assertNotEmpty(
+                $DB->get_record(
+                    'user_enrolments',
+                    [
+                        'enrolid' => $instance->id,
+                        'userid' => $user->id,
+                        'status' => ENROL_USER_ACTIVE,
+                    ],
+                    strictness: MUST_EXIST
+                )
             );
-            $this->assertEquals(ENROL_USER_ACTIVE, $userenrolment->status);
         }
 
         // Verify that user 5 is not enrolled.
@@ -525,6 +578,31 @@ final class lib_test extends \advanced_testcase {
             )
         );
 
+        // Verify that user 6 has a suspended user enrolment.
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user6->id,
+                    'contextid' => $context->id,
+                ],
+                strictness: MUST_EXIST,
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user6->id,
+                    'status' => ENROL_USER_SUSPENDED,
+                ],
+                strictness: MUST_EXIST,
+            )
+        );
+
         // Run enrolment sync.
         $trace = new progress_trace_buffer(new text_progress_trace(), false);
         $plugin->sync($trace, null);
@@ -538,12 +616,17 @@ final class lib_test extends \advanced_testcase {
             . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
             $output
         );
-        $this->assertStringContainsString('4 Ilios users found.', $output);
+        $this->assertStringContainsString('5 Ilios users found.', $output);
         $this->assertStringContainsString(
             'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user5->id} ==> courseid {$course->id}",
             $output
         );
         $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
+        $this->assertStringContainsString(
+            "changing enrollment status to '". ENROL_USER_ACTIVE . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'changing enrollment status'));
         $this->assertStringContainsString(
             "Suspending enrollment for disabled Ilios user: userid  {$user4->id} ==> courseid {$course->id}.",
             $output
@@ -567,7 +650,7 @@ final class lib_test extends \advanced_testcase {
 
         // Check user enrolments post-sync.
         $this->assertEquals(
-            3,
+            4,
             $DB->count_records(
                 'role_assignments',
                 [
@@ -577,10 +660,10 @@ final class lib_test extends \advanced_testcase {
                 ]
             )
         );
-        $this->assertEquals(4, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertEquals(5, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
 
-        // User 2, 3, and now 5, are actively enrolled as students in the course.
-        foreach ([$user2, $user3, $user5] as $user) {
+        // User 2, 3, and now 5 and 6, are actively enrolled as students in the course.
+        foreach ([$user2, $user3, $user5, $user6] as $user) {
             $this->assertNotEmpty(
                 $DB->get_record(
                     'role_assignments',
@@ -593,15 +676,17 @@ final class lib_test extends \advanced_testcase {
                     strictness: MUST_EXIST
                 )
             );
-            $userenrolment = $DB->get_record(
-                'user_enrolments',
-                [
-                    'enrolid' => $instance->id,
-                    'userid' => $user->id,
-                ],
-                strictness: MUST_EXIST
+            $this->assertNotEmpty(
+                $DB->get_record(
+                    'user_enrolments',
+                    [
+                        'enrolid' => $instance->id,
+                        'userid' => $user->id,
+                        'status' => ENROL_USER_ACTIVE,
+                    ],
+                    strictness: MUST_EXIST
+                )
             );
-            $this->assertEquals(ENROL_USER_ACTIVE, $userenrolment->status);
         }
         // Verify that user1 has been fully unenrolled and has no role assigment in the course.
         $this->assertEmpty(
