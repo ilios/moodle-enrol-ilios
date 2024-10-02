@@ -51,7 +51,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Tests the enrolment of Ilios cohort members into a Moodle course.
      */
-    public function test_enrolment_from_ilios_cohort_members(): void {
+    public function test_sync_from_ilios_cohort_members(): void {
         global $CFG, $DB;
         $this->resetAfterTest();
 
@@ -392,7 +392,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Tests the enrolment of Ilios learner-group members into a Moodle course.
      */
-    public function test_enrolment_from_ilios_learner_group_members(): void {
+    public function test_sync_from_ilios_learner_group_members(): void {
         global $CFG, $DB;
         $this->resetAfterTest();
 
@@ -736,7 +736,7 @@ final class lib_test extends \advanced_testcase {
     /**
      * Tests the enrolment of instructors to an Ilios learner-group (and its subgroups) into a Moodle course.
      */
-    public function test_enrolment_from_ilios_learner_group_instructors(): void {
+    public function test_sync_from_ilios_learner_group_instructors(): void {
         global $CFG, $DB;
         $this->resetAfterTest();
 
