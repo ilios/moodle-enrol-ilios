@@ -33,7 +33,9 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use null_progress_trace;
+use progress_trace_buffer;
 use Psr\Http\Message\RequestInterface;
+use text_progress_trace;
 
 /**
  * Ilios enrolment tests.
@@ -45,7 +47,6 @@ use Psr\Http\Message\RequestInterface;
  * @covers \enrol_ilios_plugin
  */
 final class lib_test extends \advanced_testcase {
-
 
     /**
      * Tests the enrolment of Ilios cohort members into a Moodle course.
@@ -94,7 +95,7 @@ final class lib_test extends \advanced_testcase {
                         [
                             'id' => 4,
                             'campusId' => 'xx1000004',
-                            'enabled' => false, // Disabled user account - should result in user unenrolment.
+                            'enabled' => false, // Disabled user account - should result in user enrolment suspension.
                         ],
                         [
                             'id' => 5,
@@ -138,10 +139,12 @@ final class lib_test extends \advanced_testcase {
         $this->assertEquals(0, $DB->count_records('user_enrolments'));
 
         // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
         $plugin->add_instance($course, [
-                'customint1' => 1, // Ilios cohort ID.
-                'customint2' => 0, // Ilios learners enrolment.
-                'customchar1' => 'cohort', // Enrol from cohort.
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
             ]
         );
@@ -223,8 +226,44 @@ final class lib_test extends \advanced_testcase {
         );
 
         // Run enrolment sync.
-        $trace = new null_progress_trace();
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
         $plugin->sync($trace, null);
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString(
+            "Enrolling students to Course ID {$course->id} with Role ID "
+                . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
+                $output
+        );
+        $this->assertStringContainsString('4 Ilios users found.', $output);
+        $this->assertStringContainsString(
+            'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user5->id} ==> courseid {$course->id}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
+        $this->assertStringContainsString(
+            "Suspending enrollment for disabled Ilios user: userid  {$user4->id} ==> courseid {$course->id}.",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'Suspending enrollment for disabled Ilios user:'));
+        $this->assertStringContainsString(
+            "Unenrolling users from Course ID {$course->id} with Role ID {$studentrole->id} " .
+            "that no longer associate with Ilios Sync ID {$instance->id}.",
+            $output
+        );
+        $this->assertStringContainsString(
+            "unenrolling: {$user1->id} ==> {$course->id} via Ilios {$synctype} {$ilioscohortid}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'unenrolling:'));
+        $this->assertStringContainsString(
+            "unassigning role: {$user4->id} ==> {$course->id} as {$studentrole->shortname}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'unassigning role:'));
 
         // Check user enrolments post-sync.
         $this->assertEquals(
@@ -399,11 +438,13 @@ final class lib_test extends \advanced_testcase {
         );
         $this->assertEquals(0, $DB->count_records('user_enrolments'));
 
-        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        // Instantiate an enrolment instance that targets learner-group members in Ilios.
+        $ilioslearnergroupid = 1; // Ilios cohort ID.
+        $synctype = 'learnerGroup'; // Enrol from cohort.
         $plugin->add_instance($course, [
-                'customint1' => 1, // Ilios learner-group ID.
-                'customint2' => 0, // Ilios learners enrolment.
-                'customchar1' => 'learnerGroup', // Enrol from learner-group.
+                'customint1' => $ilioslearnergroupid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
             ]
         );
@@ -485,8 +526,44 @@ final class lib_test extends \advanced_testcase {
         );
 
         // Run enrolment sync.
-        $trace = new null_progress_trace();
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
         $plugin->sync($trace, null);
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString(
+            "Enrolling students to Course ID {$course->id} with Role ID "
+            . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
+            $output
+        );
+        $this->assertStringContainsString('4 Ilios users found.', $output);
+        $this->assertStringContainsString(
+            'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user5->id} ==> courseid {$course->id}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
+        $this->assertStringContainsString(
+            "Suspending enrollment for disabled Ilios user: userid  {$user4->id} ==> courseid {$course->id}.",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'Suspending enrollment for disabled Ilios user:'));
+        $this->assertStringContainsString(
+            "Unenrolling users from Course ID {$course->id} with Role ID {$studentrole->id} " .
+            "that no longer associate with Ilios Sync ID {$instance->id}.",
+            $output
+        );
+        $this->assertStringContainsString(
+            "unenrolling: {$user1->id} ==> {$course->id} via Ilios {$synctype} {$ilioslearnergroupid}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'unenrolling:'));
+        $this->assertStringContainsString(
+            "unassigning role: {$user4->id} ==> {$course->id} as {$studentrole->shortname}",
+            $output
+        );
+        $this->assertEquals(1, substr_count($output, 'unassigning role:'));
 
         // Check user enrolments post-sync.
         $this->assertEquals(
@@ -809,10 +886,12 @@ final class lib_test extends \advanced_testcase {
         $this->assertEquals(0, $DB->count_records('user_enrolments'));
 
         // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $learnergroupid = 1;
+        $synctype = 'learnerGroup';
         $plugin->add_instance($course, [
-                'customint1' => 1, // Ilios learner-group ID.
+                'customint1' => $learnergroupid,
                 'customint2' => 1, // Ilios Instructors enrolment.
-                'customchar1' => 'learnerGroup', // Enrol from learner-group.
+                'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
             ]
         );
@@ -841,8 +920,34 @@ final class lib_test extends \advanced_testcase {
         $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
 
         // Run enrolment sync.
-        $trace = new null_progress_trace();
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
         $plugin->sync($trace, null);
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString(
+            "Enrolling instructors to Course ID {$course->id} with Role ID "
+            . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
+            $output
+        );
+        $this->assertStringContainsString('9 Ilios users found.', $output);
+        foreach ($users as $user) {
+            $this->assertStringContainsString(
+                'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user->id} ==> courseid {$course->id}",
+                $output
+            );
+        }
+        $this->assertEquals(count($users), substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
+        $this->assertStringNotContainsString('Suspending enrollment for disabled Ilios user:', $output);
+        $this->assertStringContainsString(
+            "Unenrolling users from Course ID {$course->id} with Role ID {$studentrole->id} " .
+            "that no longer associate with Ilios Sync ID {$instance->id}.",
+            $output
+        );
+        $this->assertStringNotContainsString('unenrolling:', $output);
+        $this->assertStringNotContainsString('unassigning role:', $output);
 
         // Check user enrolments post-sync.
         $this->assertEquals(
