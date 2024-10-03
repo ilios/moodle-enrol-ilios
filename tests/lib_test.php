@@ -1822,4 +1822,32 @@ final class lib_test extends \advanced_testcase {
         );
         $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
     }
+
+    /**
+     * Test group enrolment during sync.
+     */
+    public function test_sync_group_enrolment(): void {
+        $this->markTestIncomplete('to be done.');
+    }
+
+    /**
+     * Test that an explicitly set instance name is returned.
+     */
+    public function test_get_instance_name_from_instance_name(): void {
+        $this->markTestIncomplete('to be done.');
+    }
+
+    /**
+     * Test that the correct plugin name is created from the sync-info as a fallback in case the instance has no name.
+     */
+    public function test_get_instance_name_from_sync_info(): void {
+        $this->markTestIncomplete('to be done.');
+    }
+
+    /**
+     * Test that the correct plugin name is returned if not instance is given.
+     */
+    public function test_get_instance_name_no_instance(): void {
+        $this->markTestIncomplete('to be done.');
+    }
 }
