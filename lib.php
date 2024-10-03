@@ -249,15 +249,14 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         $unenrolaction = $this->get_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL);
 
-        // Iterate through all not enrolled yet users.
+        // Get all enabled enrollment Ilios instances.
         $onecourse = $courseid ? "AND e.courseid = :courseid" : "";
-        $sql = "SELECT *
-              FROM {enrol} e
-             WHERE e.enrol = 'ilios' $onecourse";
+        $sql = "SELECT * FROM {enrol} e WHERE e.enrol = 'ilios' AND e.status = :status $onecourse";
 
         $params = [];
         $params['courseid'] = $courseid;
-        $params['suspended'] = ENROL_USER_SUSPENDED;
+        $params['status'] = ENROL_INSTANCE_ENABLED;
+
         $instances = $DB->get_recordset_sql($sql, $params);
 
         foreach ($instances as $instance) {
