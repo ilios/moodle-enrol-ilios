@@ -1111,4 +1111,715 @@ final class lib_test extends \advanced_testcase {
             trim($output)
         );
     }
+
+    /**
+     * Test toggling of user enrolment.
+     */
+    public function test_sync_unenrol_then_reenrol(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Configure the Ilios API client.
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+        set_config('unenrolaction', ENROL_EXT_REMOVED_UNENROL, 'enrol_ilios');
+
+        // Mock out the responses from the Ilios API.
+        $handlerstack = HandlerStack::create(new MockHandler([
+            // API responses for first sync run.
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
+                ]));
+            },
+            // Second sync run responses.
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [
+                        [
+                            'id' => 1,
+                            'campusId' => 'xx1000001',
+                            'enabled' => true, // Add user to payload, this will result in re-enrollment.
+                        ],
+                    ],
+                ]));
+            },
+        ]));
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Minimal setup here, one course with one actively enrolled user is enough.
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000001']);
+
+        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $CFG->enrol_plugins_enabled = 'ilios';
+        $plugin->enrol_user($instance, $user->id, $studentrole->id);
+
+        // Check user enrolments pre-sync.
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user->id,
+                    'contextid' => $context->id,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_ACTIVE,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+         // Check the logging output.
+        $this->assertStringContainsString('0 Ilios users found.', $output);
+        $this->assertStringContainsString(
+            "unenrolling: {$user->id} ==> {$course->id} via Ilios {$synctype} {$ilioscohortid}",
+            $output
+        );
+
+        // Check user enrolment post-sync.
+        // Verify that the user has been fully unenrolled and has no role assigment in the course
+        // by checking that the course has currently no enrolments and role assignments.
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+
+        // Run the sync for a second time.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('1 Ilios users found.', $output);
+        $this->assertStringContainsString(
+            'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+
+        // Check user enrolment post-sync.
+        // Verify that the user has been fully re-enrolled
+        // and that the user has the student role assigment in the course.
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user->id,
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_ACTIVE,
+                ]
+            )
+        );
+    }
+
+    /**
+     * Test toggling of enrolment status.
+     */
+    public function test_sync_suspend_then_unsuspend_enrolment(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Configure the Ilios API client.
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+        set_config('unenrolaction', ENROL_EXT_REMOVED_SUSPENDNOROLES, 'enrol_ilios');
+
+        // Mock out the responses from the Ilios API.
+        $handlerstack = HandlerStack::create(new MockHandler([
+            // API responses for first sync run.
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
+                ]));
+            },
+            // Second sync run responses.
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [
+                        [
+                            'id' => 1,
+                            'campusId' => 'xx1000001',
+                            'enabled' => true, // Add user to payload, this will result in re-enrollment.
+                        ],
+                    ],
+                ]));
+            },
+        ]));
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Minimal setup here, one course with one actively enrolled user is enough.
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000001']);
+
+        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $CFG->enrol_plugins_enabled = 'ilios';
+        $plugin->enrol_user($instance, $user->id, $studentrole->id);
+
+        // Check user enrolments pre-sync.
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+
+        // Check user enrollment pre-sync.
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user->id,
+                    'contextid' => $context->id,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_ACTIVE,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('0 Ilios users found.', $output);
+        $this->assertStringNotContainsString(
+            "unenrolling: {$user->id} ==> {$course->id} via Ilios {$synctype} {$ilioscohortid}",
+            $output
+        );
+        $this->assertStringContainsString(
+            "suspending and unassigning all roles: userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+
+        // Check user enrolment post-sync.
+        // Verify that the user's enrolment has been suspended
+        // and that the user's student role has been removed from the course.
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_SUSPENDED,
+                ]
+            )
+        );
+
+        // Run the sync for a second time.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('1 Ilios users found.', $output);
+        $this->assertStringContainsString(
+            "changing enrollment status to '". ENROL_USER_ACTIVE
+            . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+
+        // Check user enrolment post-sync.
+        // Verify that the user's enrolment has been reactivated and
+        // that the user's student role has been re-assigned in the course.
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'userid' => $user->id,
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_ACTIVE,
+                ]
+            )
+        );
+    }
+
+    /**
+     * Test that suspended enrollments do not get re-activated for disabled Ilios users.
+     */
+    public function test_sync_do_not_reactivate_suspended_enrolment_for_disabled_ilios_users(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Configure the Ilios API client.
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+
+        // Mock out the responses from the Ilios API.
+        $handlerstack = HandlerStack::create(new MockHandler([
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [
+                        [
+                            'id' => 1,
+                            'campusId' => 'xx1000001',
+                            'enabled' => false, // Disabled in Ilios.
+                        ],
+                    ],
+                ]));
+            },
+        ]));
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Set up one course with one enrolled but suspended user is enough.
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000001']);
+
+        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $CFG->enrol_plugins_enabled = 'ilios';
+
+        // Enrol the user, then suspend the enrolment.
+        $plugin->enrol_user($instance, $user->id, $studentrole->id);
+        $plugin->update_user_enrol($instance, $user->id, ENROL_USER_SUSPENDED);
+
+        // Check user enrolments pre-sync.
+        $this->assertEquals(
+            1,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_SUSPENDED,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('1 Ilios users found.', $output);
+        $this->assertStringNotContainsString(
+            "unenrolling: {$user->id} ==> {$course->id} via Ilios {$synctype} {$ilioscohortid}",
+            $output
+        );
+        $this->assertStringNotContainsString(
+            "suspending and unassigning all roles: userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+
+        // Check user enrolment post-sync.
+        // Verify that the user's enrolment has been suspended
+        // and that the user's student role has been removed from the course.
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(1, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+        $this->assertNotEmpty(
+            $DB->get_record(
+                'user_enrolments',
+                [
+                    'enrolid' => $instance->id,
+                    'userid' => $user->id,
+                    'status' => ENROL_USER_SUSPENDED,
+                ],
+                strictness: MUST_EXIST
+            )
+        );
+    }
+
+    /**
+     * Test that disabled Ilios users are not enrolled in the first place.
+     */
+    public function test_sync_do_not_enrol_disabled_ilios_users(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Configure the Ilios API client.
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+
+        // Mock out the responses from the Ilios API.
+        $handlerstack = HandlerStack::create(new MockHandler([
+            function(RequestInterface $request) {
+                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
+                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
+                return new Response(200, [], json_encode([
+                    'cohorts' => [
+                        [
+                            'id' => 1,
+                            'users' => ['1'],
+                        ],
+                    ],
+                ]));
+            },
+            function (RequestInterface $request) {
+                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
+                $this->assertEquals(
+                    'filters[id][]=1',
+                    urldecode($request->getUri()->getQuery())
+                );
+                return new Response(200, [], json_encode([
+                    'users' => [
+                        [
+                            'id' => 1,
+                            'campusId' => 'xx1000001',
+                            'enabled' => false, // Disabled in Ilios.
+                        ],
+                    ],
+                ]));
+            },
+        ]));
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Minimal setup here, one course without user enrolments.
+        $course = $this->getDataGenerator()->create_course();
+        $context = context_course::instance($course->id);
+        $user = $this->getDataGenerator()->create_user(['idnumber' => 'xx1000001']);
+
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $CFG->enrol_plugins_enabled = 'ilios';
+
+        // Check user enrolments pre-sync.
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('1 Ilios users found.', $output);
+        $this->assertStringNotContainsString(
+            "unenrolling: {$user->id} ==> {$course->id} via Ilios {$synctype} {$ilioscohortid}",
+            $output
+        );
+        $this->assertStringNotContainsString(
+            'enrolling with ' . ENROL_USER_ACTIVE . " status: userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+        $this->assertStringNotContainsString(
+            "suspending and unassigning all roles: userid {$user->id} ==> courseid {$course->id}",
+            $output
+        );
+
+        // Check user enrolments post-sync.
+        // Verify that not users have been enrolled and no user roles have been assigned in the course.
+        $this->assertEquals(
+            0,
+            $DB->count_records(
+                'role_assignments',
+                [
+                    'roleid' => $studentrole->id,
+                    'component' => 'enrol_ilios',
+
+                    'contextid' => $context->id,
+                ]
+            )
+        );
+        $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
+    }
 }
