@@ -1824,6 +1824,52 @@ final class lib_test extends \advanced_testcase {
     }
 
     /**
+     * Test that disabled enrollment instances do not get processed.
+     */
+    public function test_sync_ignore_disabled_instances(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Minimal setup here, one course without user enrolments.
+        $course = $this->getDataGenerator()->create_course();
+
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        // Create a disabled enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+                'status' => ENROL_INSTANCE_DISABLED,
+            ]
+        );
+        $CFG->enrol_plugins_enabled = 'ilios';
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        // There should be nothing in here but the task start/end notifications.
+        $this->assertEquals(
+            "Starting user enrolment synchronisation...\n"
+            . "...user enrolment synchronisation finished."
+            , trim($output));
+
+        // No need to check enrolments, nothing happened during the sync.
+    }
+
+    /**
      * Test group enrolment during sync.
      */
     public function test_sync_group_enrolment(): void {
