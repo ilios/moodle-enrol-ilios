@@ -66,12 +66,7 @@ $outcome->success = true;
 $outcome->response = new stdClass();
 $outcome->error = '';
 
-try {
-    $ilios = di::get(ilios::class);
-} catch (Exception $e) {
-    // Re-throw exception.
-    throw new Exception('ERROR: Failed to instantiate Ilios client.', $e);
-}
+$ilios = di::get(ilios::class);
 
 switch ($action) {
     case 'getselectschooloptions':
