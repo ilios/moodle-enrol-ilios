@@ -349,7 +349,6 @@ class ilios {
      * @param string $path The target path fragment of the API request URL. May include query parameters.
      * @param array $filterby An associative array of filter options.
      * @param array $sortby An associative array of sort options.
-     * @param array $options Additional options.
      * @return object The decoded response body.
      * @throws GuzzleException
      * @throws moodle_exception
@@ -358,15 +357,9 @@ class ilios {
         string $path,
         array $filterby = [],
         array $sortby = [],
-        array $options = []
     ): object {
         $this->validate_access_token($this->accesstoken);
-
-        if (!array_key_exists('headers', $options) || empty($options['headers'])) {
-            $options = array_merge($options, ['headers' => [
-                'X-JWT-Authorization' => 'Token ' . $this->accesstoken,
-            ]]);
-        }
+        $options = ['headers' => ['X-JWT-Authorization' => 'Token ' . $this->accesstoken]];
 
         // Construct query params from given filters and sort orders.
         // Unfortunately, <code>http_build_query()</code> doesn't cut it here, so we have to hand-roll this.
