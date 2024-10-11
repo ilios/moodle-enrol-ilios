@@ -19,7 +19,7 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -35,6 +35,15 @@ $string['defaultinstructorrole'] = 'Default instructor role';
 $string['defaultlearnerrole'] = 'Default learner role';
 $string['enrol'] = 'Enrol Ilios users';
 $string['enrolusers'] = 'Enrol users';
+$string['errordecodingresponse'] = 'Failed to decode response.';
+$string['errordecodingtoken'] = 'Failed to decode API token.';
+$string['erroremptyresponse'] = 'Empty response.';
+$string['erroremptytoken'] = 'API token is empty.';
+$string['errorinvalidnumbertokensegments'] = 'API token has an incorrect number of segments.';
+$string['errorresponseentitynotfound'] = 'Cannot find {$a} in response.';
+$string['errorresponsewithcodeandmessage'] = 'Request failed. The API responded with the code: {$a->code} and message: {$a->message}.';
+$string['errorresponsewitherror'] = 'Request failed. The API responded with the following error: {$a}.';
+$string['errortokenexpired'] = 'API token is expired.';
 $string['host_url'] = 'Host URL';
 $string['host_url_desc'] = 'Type Ilios server IP address or host URL.';
 $string['ilios'] = 'Ilios';

@@ -19,9 +19,12 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+use core\di;
+use enrol_ilios\ilios;
 
 require('../../config.php');
 require_once("$CFG->dirroot/enrol/ilios/edit_form.php");
@@ -43,6 +46,13 @@ $PAGE->set_pagelayout('admin');
 $returnurl = new moodle_url('/enrol/instances.php', ['id' => $course->id]);
 if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
+}
+
+try {
+    $ilios = di::get(ilios::class);
+} catch (Exception $e) {
+    // Re-throw exception.
+    throw new Exception('ERROR: Failed to instantiate Ilios client.', $e);
 }
 
 /** @var enrol_ilios_plugin $enrol */
@@ -74,7 +84,7 @@ if ($courseadmin && $courseadmin->get('users') && $courseadmin->get('users')->ge
     $courseadmin->get('users')->get('manageinstances')->make_active();
 }
 
-$mform = new enrol_ilios_edit_form(null, [$instance, $enrol, $course]);
+$mform = new enrol_ilios_edit_form(null, [$instance, $enrol, $course, $ilios]);
 
 if ($mform->is_cancelled()) {
     redirect($returnurl);

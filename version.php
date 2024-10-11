@@ -19,18 +19,15 @@
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
- * @copyright  2017 The Regents of the University of California
+ * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2024061003;       // The current plugin version (Date: YYYYMMDDXX).
-$plugin->requires  = 2023100400;       // Requires this Moodle version.
+$plugin->version   = 2024100200;       // The current plugin version (Date: YYYYMMDDXX).
+$plugin->requires  = 2024041600;       // Requires this Moodle version.
 $plugin->component = 'enrol_ilios';     // Full name of the plugin (used for diagnostics).
-$plugin->release = 'v4.3';
-$plugin->supported = [403, 403];
+$plugin->release = 'v4.4';
+$plugin->supported = [404, 404];
 $plugin->maturity = MATURITY_STABLE;
-$plugin->dependencies = [
-    'local_iliosapiclient' => 2024061000,
-];

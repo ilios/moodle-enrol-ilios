@@ -15,50 +15,50 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Scheduled task for processing Ilios enrolments.
+ * Provides utility methods for testing.
  *
+ * @category   test
  * @package    enrol_ilios
  * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-namespace enrol_ilios\task;
+namespace enrol_ilios\tests;
 
-use coding_exception;
-use core\task\scheduled_task;
+use DateTime;
+use Firebase\JWT\JWT;
 
 /**
- * Simple task to run sync enrolments.
+ * A class providing utility methods for testing.
  *
+ * @category   test
  * @package    enrol_ilios
  * @copyright  The Regents of the University of California
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class ilios_sync_task extends scheduled_task {
+class helper {
 
     /**
-     * Gets the task name.
+     * Generates an un-expired JWT, to be used as access token.
+     * This token will pass client-side token validation.
      *
-     * @return string The task name.
-     * @throws coding_exception
+     * @return string
      */
-    public function get_name() {
-        return get_string('iliossync', 'enrol_ilios');
+    public static function create_valid_ilios_api_access_token(): string {
+        $key = 'doesnotmatterhere';
+        $payload = ['exp' => (new DateTime('10 days'))->getTimestamp()];
+        return JWT::encode($payload, $key, 'HS256');
     }
 
     /**
-     * Executes the task.
+     * Generates an expired - and therefore invalid - JWT, to be used as access token.
+     * This token will fail client-side token validation.
+     *
+     * @return string
      */
-    public function execute(): void {
-        global $CFG;
-
-        require_once($CFG->dirroot . '/enrol/ilios/lib.php');
-
-        if (!enrol_is_enabled('ilios')) {
-            return;
-        }
-
-        $plugin = enrol_get_plugin('ilios');
-        $plugin->sync(new \text_progress_trace());
+    public static function create_invalid_ilios_api_access_token(): string {
+        $key = 'doesnotmatterhere';
+        $payload = ['exp' => (new DateTime('-2 days'))->getTimestamp()];
+        return JWT::encode($payload, $key, 'HS256');
     }
 }
