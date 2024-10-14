@@ -48,12 +48,7 @@ if (!enrol_is_enabled('ilios')) {
     redirect($returnurl);
 }
 
-try {
-    $ilios = di::get(ilios::class);
-} catch (Exception $e) {
-    // Re-throw exception.
-    throw new Exception('ERROR: Failed to instantiate Ilios client.', $e);
-}
+$ilios = di::get(ilios::class);
 
 /** @var enrol_ilios_plugin $enrol */
 $enrol = enrol_get_plugin('ilios');

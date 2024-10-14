@@ -45,12 +45,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * Constructor.
      */
     public function __construct() {
-        try {
-            $this->ilios = di::get(ilios::class);
-        } catch (Exception $e) {
-            // Re-throw exception.
-            throw new Exception('ERROR: Failed to instantiate Ilios client.', $e);
-        }
+        $this->ilios = di::get(ilios::class);
     }
 
     /**
