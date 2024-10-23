@@ -31,6 +31,7 @@ use core\http_client;
 use enrol_ilios\tests\helper;
 use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
+use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use progress_trace_buffer;
 use Psr\Http\Message\RequestInterface;
@@ -61,55 +62,47 @@ final class lib_test extends \advanced_testcase {
 
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['2', '3', '4', '5', '6'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['2', '3', '4', '5', '6'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 2,
-                            'campusId' => 'xx1000002',
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 3,
-                            'campusId' => 'xx1000003',
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 4,
-                            'campusId' => 'xx1000004',
-                            'enabled' => false, // Disabled user account - should result in user enrolment suspension.
-                        ],
-                        [
-                            'id' => 5,
-                            'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 6,
-                            'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
-                            'enabled' => true,
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 2,
+                        'campusId' => 'xx1000002',
+                        'enabled' => true,
                     ],
-                ]));
-            },
+                    [
+                        'id' => 3,
+                        'campusId' => 'xx1000003',
+                        'enabled' => true,
+                    ],
+                    [
+                        'id' => 4,
+                        'campusId' => 'xx1000004',
+                        'enabled' => false, // Disabled user account - should result in user enrolment suspension.
+                    ],
+                    [
+                        'id' => 5,
+                        'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
+                        'enabled' => true,
+                    ],
+                    [
+                        'id' => 6,
+                        'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
+                        'enabled' => true,
+                    ],
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -267,6 +260,16 @@ final class lib_test extends \advanced_testcase {
         $trace->finished();
         $trace->reset_buffer();
 
+        // Check the captured request history.
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[0]['request']->getUri()->getPath());
+
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
+
         // Check the logging output.
         $this->assertStringContainsString(
             "Enrolling students to Course ID {$course->id} with Role ID "
@@ -403,56 +406,48 @@ final class lib_test extends \advanced_testcase {
 
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/learnergroups/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'learnerGroups' => [
-                        [
-                            'id' => 1,
-                            'users' => ['2', '3', '4', '5', '6'],
-                        ],
+            new Response(200, [], json_encode([
+                'learnerGroups' => [
+                    [
+                        'id' => 1,
+                        'users' => ['2', '3', '4', '5', '6'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 2,
-                            'campusId' => 'xx1000002',
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 3,
-                            'campusId' => 'xx1000003',
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 4,
-                            'campusId' => 'xx1000004',
-                            'enabled' => false, // Disabled user account - should result in user unenrolment.
-                        ],
-                        [
-                            'id' => 5,
-                            'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
-                            'enabled' => true,
-                        ],
-                        [
-                            'id' => 6,
-                            'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
-                            'enabled' => true,
-                        ],
-
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 2,
+                        'campusId' => 'xx1000002',
+                        'enabled' => true,
                     ],
-                ]));
-            },
+                    [
+                        'id' => 3,
+                        'campusId' => 'xx1000003',
+                        'enabled' => true,
+                    ],
+                    [
+                        'id' => 4,
+                        'campusId' => 'xx1000004',
+                        'enabled' => false, // Disabled user account - should result in user unenrolment.
+                    ],
+                    [
+                        'id' => 5,
+                        'campusId' => 'xx1000005', // Not currently enrolled - should result in new user enrolment.
+                        'enabled' => true,
+                    ],
+                    [
+                        'id' => 6,
+                        'campusId' => 'xx1000006', // Currently with suspended enrolment in Moodle.
+                        'enabled' => true,
+                    ],
 
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -610,6 +605,14 @@ final class lib_test extends \advanced_testcase {
         $trace->finished();
         $trace->reset_buffer();
 
+        // Check the captured request history.
+        $this->assertEquals('/api/v3/learnergroups/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=2&filters[id][]=3&filters[id][]=4&filters[id][]=5&filters[id][]=6',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
+
         // Check the logging output.
         $this->assertStringContainsString(
             "Enrolling students to Course ID {$course->id} with Role ID "
@@ -748,198 +751,148 @@ final class lib_test extends \advanced_testcase {
 
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
-            function(RequestInterface $request) {
-                $this->assertEquals('/api/v3/learnergroups/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'learnerGroups' => [
-                        [
-                            'id' => 1,
-                            'children' => ['2', '3'],
-                            'ilmSessions' => ['1', '2'],
-                            'offerings' => ['1', '2'],
-                            'instructorGroups' => [],
-                            'instructors' => [],
-                        ],
+            new Response(200, [], json_encode([
+                'learnerGroups' => [
+                    [
+                        'id' => 1,
+                        'children' => ['2', '3'],
+                        'ilmSessions' => ['1', '2'],
+                        'offerings' => ['1', '2'],
+                        'instructorGroups' => [],
+                        'instructors' => [],
                     ],
-                ]));
-            },
+                ],
+            ])),
             // We're querying the entry-point learner group again, for no good reason.
             // Todo: Eliminate this duplication from the enrolment workflow [ST 2024/09/30].
-            function(RequestInterface $request) {
-                $this->assertEquals('/api/v3/learnergroups/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'learnerGroups' => [
-                        [
-                            'id' => 1,
-                            'children' => ['2', '3'],
-                            'ilmSessions' => ['1', '2'],
-                            'offerings' => ['1', '2'],
-                            'instructorGroups' => [],
-                            'instructors' => [],
-                        ],
+            new Response(200, [], json_encode([
+                'learnerGroups' => [
+                    [
+                        'id' => 1,
+                        'children' => ['2', '3'],
+                        'ilmSessions' => ['1', '2'],
+                        'offerings' => ['1', '2'],
+                        'instructorGroups' => [],
+                        'instructors' => [],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/offerings', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1&filters[id][]=2',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
+                ],
+            ])),
+            new Response(200, [], json_encode([
                 'offerings' => [
-                        [
-                            'id' => 1,
-                            'instructors' => [],
-                            'instructorGroups' => ['1'],
-                            'learners' => [],
-                            'learnerGroups' => ['1'],
-                        ],
-                        [
-                            'id' => 2,
-                            'instructors' => ['1'],
-                            'instructorGroups' => [],
-                            'learners' => [],
-                            'learnerGroups' => ['1'],
-                        ],
+                    [
+                        'id' => 1,
+                        'instructors' => [],
+                        'instructorGroups' => ['1'],
+                        'learners' => [],
+                        'learnerGroups' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/ilmsessions', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1&filters[id][]=2',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'ilmSessions' => [
-                        [
-                            'id' => 1,
-                            'instructors' => [],
-                            'instructorGroups' => ['1'],
-                            'learners' => [],
-                            'learnerGroups' => ['1'],
-                        ],
-                        [
-                            'id' => 2,
-                            'instructors' => ['1'],
-                            'instructorGroups' => [],
-                            'learners' => [],
-                            'learnerGroups' => ['1'],
-                        ],
+                    [
+                        'id' => 2,
+                        'instructors' => ['1'],
+                        'instructorGroups' => [],
+                        'learners' => [],
+                        'learnerGroups' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/learnergroups/2', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'learnerGroups' => [
-                        [
-                            'id' => 2,
-                            'children' => [],
-                            'ilmSessions' => [],
-                            'offerings' => ['3'],
-                            'instructors' => ['2'],
-                            'instructorGroups' => ['2'],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'ilmSessions' => [
+                    [
+                        'id' => 1,
+                        'instructors' => [],
+                        'instructorGroups' => ['1'],
+                        'learners' => [],
+                        'learnerGroups' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/offerings', $request->getUri()->getPath());
-                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
-                    'offerings' => [
-                        [
-                            'id' => 3,
-                            'instructors' => [],
-                            'instructorGroups' => [],
-                            'learners' => [],
-                            'learnerGroups' => ['2'],
-                        ],
+                    [
+                        'id' => 2,
+                        'instructors' => ['1'],
+                        'instructorGroups' => [],
+                        'learners' => [],
+                        'learnerGroups' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
-                $this->assertEquals('filters[id][]=2', urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
-                    'instructorGroups' => [
-                        [
-                            'id' => 2,
-                            'users' => ['6', '7'],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'learnerGroups' => [
+                    [
+                        'id' => 2,
+                        'children' => [],
+                        'ilmSessions' => [],
+                        'offerings' => ['3'],
+                        'instructors' => ['2'],
+                        'instructorGroups' => ['2'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/learnergroups/3', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'learnerGroups' => [
-                        [
-                            'id' => 3,
-                            'children' => [],
-                            'ilmSessions' => ['3'],
-                            'offerings' => [],
-                            'instructors' => ['3'],
-                            'instructorGroups' => ['3'],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'offerings' => [
+                    [
+                        'id' => 3,
+                        'instructors' => [],
+                        'instructorGroups' => [],
+                        'learners' => [],
+                        'learnerGroups' => ['2'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/ilmsessions', $request->getUri()->getPath());
-                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
-                    'ilmSessions' => [
-                        [
-                            'id' => 3,
-                            'instructors' => [],
-                            'instructorGroups' => [],
-                            'learners' => [],
-                            'learnerGroups' => [],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'instructorGroups' => [
+                    [
+                        'id' => 2,
+                        'users' => ['6', '7'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
-                $this->assertEquals('filters[id][]=3', urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
-                    'instructorGroups' => [
-                        [
-                            'id' => 3,
-                            'users' => ['8', '9'],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'learnerGroups' => [
+                    [
+                        'id' => 3,
+                        'children' => [],
+                        'ilmSessions' => ['3'],
+                        'offerings' => [],
+                        'instructors' => ['3'],
+                        'instructorGroups' => ['3'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/instructorgroups', $request->getUri()->getPath());
-                $this->assertEquals('filters[id][]=1', urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
-                    'instructorGroups' => [
-                        [
-                            'id' => 1,
-                            'users' => ['4', '5'],
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'ilmSessions' => [
+                    [
+                        'id' => 3,
+                        'instructors' => [],
+                        'instructorGroups' => [],
+                        'learners' => [],
+                        'learnerGroups' => [],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1&filters[id][]=2&filters[id][]=3&filters[id][]=4'
-                    . '&filters[id][]=5&filters[id][]=6&filters[id][]=7&filters[id][]=8&filters[id][]=9',
-                    urldecode($request->getUri()->getQuery()));
-                return new Response(200, [], json_encode([
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'instructorGroups' => [
+                    [
+                        'id' => 3,
+                        'users' => ['8', '9'],
+                    ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'instructorGroups' => [
+                    [
+                        'id' => 1,
+                        'users' => ['4', '5'],
+                    ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
                     'users' => array_map(
                         fn ($i) => ['id' => $i, 'campusId' => 'xx100000'. $i, 'enabled' => true ],
                         range(1, 9)
                     ),
-                ]));
-            },
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -1011,6 +964,37 @@ final class lib_test extends \advanced_testcase {
         $output = $trace->get_buffer();
         $trace->finished();
         $trace->reset_buffer();
+
+        // Check the captured request history.
+        $this->assertEquals('/api/v3/learnergroups/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/learnergroups/1', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/offerings', $container[2]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1&filters[id][]=2',
+            urldecode($container[2]['request']->getUri()->getQuery())
+        );
+        $this->assertEquals('/api/v3/ilmsessions', $container[3]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1&filters[id][]=2',
+            urldecode($container[3]['request']->getUri()->getQuery())
+        );
+        $this->assertEquals('/api/v3/learnergroups/2', $container[4]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/offerings', $container[5]['request']->getUri()->getPath());
+        $this->assertEquals('filters[id][]=3', urldecode($container[5]['request']->getUri()->getQuery()));
+        $this->assertEquals('/api/v3/instructorgroups', $container[6]['request']->getUri()->getPath());
+        $this->assertEquals('filters[id][]=2', urldecode($container[6]['request']->getUri()->getQuery()));
+        $this->assertEquals('/api/v3/learnergroups/3', $container[7]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/ilmsessions', $container[8]['request']->getUri()->getPath());
+        $this->assertEquals('filters[id][]=3', urldecode($container[8]['request']->getUri()->getQuery()));
+        $this->assertEquals('/api/v3/instructorgroups', $container[9]['request']->getUri()->getPath());
+        $this->assertEquals('filters[id][]=3', urldecode($container[9]['request']->getUri()->getQuery()));
+        $this->assertEquals('/api/v3/instructorgroups', $container[10]['request']->getUri()->getPath());
+        $this->assertEquals('filters[id][]=1', urldecode($container[10]['request']->getUri()->getQuery()));
+        $this->assertEquals('/api/v3/users', $container[11]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1&filters[id][]=2&filters[id][]=3&filters[id][]=4'
+            . '&filters[id][]=5&filters[id][]=6&filters[id][]=7&filters[id][]=8&filters[id][]=9',
+            urldecode($container[11]['request']->getUri()->getQuery()));
 
         // Check the logging output.
         $this->assertStringContainsString(
@@ -1128,58 +1112,39 @@ final class lib_test extends \advanced_testcase {
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
             // API responses for first sync run.
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
-                ]));
-            },
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
+            ])),
             // Second sync run responses.
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 1,
-                            'campusId' => 'xx1000001',
-                            'enabled' => true, // Add user to payload, this will result in re-enrollment.
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 1,
+                        'campusId' => 'xx1000001',
+                        'enabled' => true, // Add user to payload, this will result in re-enrollment.
                     ],
-                ]));
-            },
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -1281,6 +1246,22 @@ final class lib_test extends \advanced_testcase {
         $trace->finished();
         $trace->reset_buffer();
 
+        // Check the captured request history.
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
+        $this->assertEquals('ilios.demo', $container[2]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[2]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[3]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[3]['request']->getUri()->getQuery())
+        );
+
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
         $this->assertStringContainsString(
@@ -1342,58 +1323,39 @@ final class lib_test extends \advanced_testcase {
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
             // API responses for first sync run.
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
-                ]));
-            },
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [], // Don't include the user in the payload, this will trigger unenrollment downstream.
+            ])),
             // Second sync run responses.
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 1,
-                            'campusId' => 'xx1000001',
-                            'enabled' => true, // Add user to payload, this will result in re-enrollment.
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 1,
+                        'campusId' => 'xx1000001',
+                        'enabled' => true, // Add user to payload, this will result in re-enrollment.
                     ],
-                ]));
-            },
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -1511,6 +1473,22 @@ final class lib_test extends \advanced_testcase {
         $trace->finished();
         $trace->reset_buffer();
 
+        // Check the captured request history.
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
+        $this->assertEquals('ilios.demo', $container[2]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[2]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[3]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[3]['request']->getUri()->getQuery())
+        );
+
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
         $this->assertStringContainsString(
@@ -1571,35 +1549,27 @@ final class lib_test extends \advanced_testcase {
 
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 1,
-                            'campusId' => 'xx1000001',
-                            'enabled' => false, // Disabled in Ilios.
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 1,
+                        'campusId' => 'xx1000001',
+                        'enabled' => false, // Disabled in Ilios.
                     ],
-                ]));
-            },
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -1662,6 +1632,15 @@ final class lib_test extends \advanced_testcase {
         $trace->finished();
         $trace->reset_buffer();
 
+        // Check the captured request history.
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
+
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
         $this->assertStringNotContainsString(
@@ -1715,35 +1694,27 @@ final class lib_test extends \advanced_testcase {
 
         // Mock out the responses from the Ilios API.
         $handlerstack = HandlerStack::create(new MockHandler([
-            function(RequestInterface $request) {
-                $this->assertEquals('ilios.demo', $request->getUri()->getHost());
-                $this->assertEquals('/api/v3/cohorts/1', $request->getUri()->getPath());
-                return new Response(200, [], json_encode([
-                    'cohorts' => [
-                        [
-                            'id' => 1,
-                            'users' => ['1'],
-                        ],
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
                     ],
-                ]));
-            },
-            function (RequestInterface $request) {
-                $this->assertEquals('/api/v3/users', $request->getUri()->getPath());
-                $this->assertEquals(
-                    'filters[id][]=1',
-                    urldecode($request->getUri()->getQuery())
-                );
-                return new Response(200, [], json_encode([
-                    'users' => [
-                        [
-                            'id' => 1,
-                            'campusId' => 'xx1000001',
-                            'enabled' => false, // Disabled in Ilios.
-                        ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 1,
+                        'campusId' => 'xx1000001',
+                        'enabled' => false, // Disabled in Ilios.
                     ],
-                ]));
-            },
+                ],
+            ])),
         ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
         di::set(http_client::class, new http_client(['handler' => $handlerstack]));
 
         // Get a handle of the enrolment handler.
@@ -1790,6 +1761,15 @@ final class lib_test extends \advanced_testcase {
         $output = $trace->get_buffer();
         $trace->finished();
         $trace->reset_buffer();
+
+        // Check the captured request history.
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/cohorts/1', $container[0]['request']->getUri()->getPath());
+        $this->assertEquals('/api/v3/users', $container[1]['request']->getUri()->getPath());
+        $this->assertEquals(
+            'filters[id][]=1',
+            urldecode($container[1]['request']->getUri()->getQuery())
+        );
 
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
