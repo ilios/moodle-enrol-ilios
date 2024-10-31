@@ -884,10 +884,17 @@ final class lib_test extends \advanced_testcase {
                 ],
             ])),
             new Response(200, [], json_encode([
-                    'users' => array_map(
-                        fn ($i) => ['id' => $i, 'campusId' => 'xx100000'. $i, 'enabled' => true ],
-                        range(1, 9)
-                    ),
+                    'users' => [
+                        ['id' => 1, 'campusId' => 'xx1000001', 'enabled' => true ],
+                        ['id' => 2, 'campusId' => 'xx1000002', 'enabled' => true ],
+                        ['id' => 3, 'campusId' => 'xx1000003', 'enabled' => true ],
+                        ['id' => 4, 'campusId' => 'xx1000004', 'enabled' => true ],
+                        ['id' => 5, 'campusId' => 'xx1000005', 'enabled' => true ],
+                        ['id' => 6, 'campusId' => 'xx1000006', 'enabled' => true ],
+                        ['id' => 7, 'campusId' => 'xx1000007', 'enabled' => true ],
+                        ['id' => 8, 'campusId' => 'xx1000008', 'enabled' => true ],
+                        ['id' => 9, 'campusId' => 'xx1000009', 'enabled' => true ],
+                    ],
             ])),
         ]));
         $container = [];
