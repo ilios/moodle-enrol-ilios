@@ -37,18 +37,6 @@ require_once($CFG->libdir.'/filelib.php');
  */
 class enrol_ilios_plugin extends enrol_plugin {
     /**
-     * @var ilios The Ilios API client.
-     */
-    protected ilios $ilios;
-
-    /**
-     * Constructor.
-     */
-    public function __construct() {
-        $this->ilios = di::get(ilios::class);
-    }
-
-    /**
      * Is it possible to delete enrol instance via standard UI?
      *
      * @param stdClass $instance
@@ -206,6 +194,8 @@ class enrol_ilios_plugin extends enrol_plugin {
         global $CFG, $DB;
         require_once($CFG->dirroot . '/group/lib.php');
 
+        $ilios = di::get(ilios::class);
+
         if (!enrol_is_enabled('ilios')) {
             // Purge all roles if ilios sync disabled, those can be recreated later here by cron or CLI.
             $trace->output('Ilios enrolment sync plugin is disabled, unassigning all plugin roles and stopping.');
@@ -239,9 +229,9 @@ class enrol_ilios_plugin extends enrol_plugin {
             $syncid = $instance->customint1;
 
             if ('learnerGroup' === $synctype) {
-                $entity = $this->ilios->get_learner_group($syncid);
+                $entity = $ilios->get_learner_group($syncid);
             } else {
-                $entity = $this->ilios->get_cohort($syncid);
+                $entity = $ilios->get_cohort($syncid);
             }
 
             if (empty($entity)) {
@@ -257,7 +247,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             if (!empty($instance->customint2)) {
                 $instructors = [];
                 if ('learnerGroup' === $synctype && !empty($instance->customint2)) {
-                    $instructors = $this->ilios->get_instructor_ids_from_learner_group($entity->id);
+                    $instructors = $ilios->get_instructor_ids_from_learner_group($entity->id);
                 }
                 if (!empty($instructors)) {
                     $trace->output(
@@ -269,7 +259,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                         . $instance->id
                         . "."
                     );
-                    $users = $this->ilios->get_users(['id' => $instructors]);
+                    $users = $ilios->get_users(['id' => $instructors]);
                 }
             } else if (!empty($entity->users)) {
                 $trace->output(
@@ -281,7 +271,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $instance->id
                     . "."
                 );
-                $users = $this->ilios->get_users(['id' => $entity->users]);
+                $users = $ilios->get_users(['id' => $entity->users]);
             }
             $trace->output(count($users) . " Ilios users found.");
 
