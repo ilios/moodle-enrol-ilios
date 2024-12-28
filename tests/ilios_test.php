@@ -1094,6 +1094,79 @@ final class ilios_test extends advanced_testcase {
         ];
     }
 
+    /**
+     * Tests get() in batch mode.
+     *
+     * @return void
+     * @throws GuzzleException
+     * @throws moodle_exception
+     */
+    public function test_get_in_batch_mode(): void {
+        $this->resetAfterTest();
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+        $handlerstack = HandlerStack::create(new MockHandler([
+            new Response(200, [], json_encode([
+                'schools' => [
+                    ['id' => 1, 'title' => 'Medicine'],
+                    ['id' => 2, 'title' => 'Pharmacy'],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'schools' => [
+                    ['id' => 3, 'title' => 'Dentistry'],
+                    ['id' => 4, 'title' => 'Nursing'],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'schools' => [
+                    ['id' => 5, 'title' => 'Other'],
+                ],
+            ])),
+        ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        $ilios = di::get(ilios::class);
+        $filterby = ['id' => range(1000, 1564)];
+        $sortby = ['name' => 'DESC'];
+        $data = $ilios->get('schools', 'schools', $filterby, $sortby);
+
+        $this->assertCount(3, $container);
+        $this->assertEquals('GET', $container[0]['request']->getMethod());
+        $this->assertEquals('ilios.demo', $container[0]['request']->getUri()->getHost());
+        $this->assertEquals('/api/v3/schools', $container[0]['request']->getUri()->getPath());
+        $paramsbatch1 = explode('&', urldecode($container[0]['request']->getUri()->getQuery()));
+        $this->assertCount(251, $paramsbatch1); // That's 250 filtering params and 1 sorting param.
+        $this->assertEquals('filters[id][]=1000', $paramsbatch1[0]);
+        $this->assertEquals('filters[id][]=1249', $paramsbatch1[249]);
+        $this->assertEquals('order_by[name]=DESC', $paramsbatch1[250]);
+        $paramsbatch2 = explode('&', urldecode($container[1]['request']->getUri()->getQuery()));
+        $this->assertCount(251, $paramsbatch2);
+        $this->assertEquals('filters[id][]=1250', $paramsbatch2[0]);
+        $this->assertEquals('filters[id][]=1499', $paramsbatch2[249]);
+        $this->assertEquals('order_by[name]=DESC', $paramsbatch2[250]);
+        $paramsbatch3 = explode('&', urldecode($container[2]['request']->getUri()->getQuery()));
+        $this->assertCount(66, $paramsbatch3);
+        $this->assertEquals('filters[id][]=1500', $paramsbatch3[0]);
+        $this->assertEquals('filters[id][]=1564', $paramsbatch3[64]);
+        $this->assertEquals('order_by[name]=DESC', $paramsbatch3[65]);
+
+        $this->assertCount(5, $data);
+        $this->assertEquals(1, $data[0]->id);
+        $this->assertEquals('Medicine', $data[0]->title);
+        $this->assertEquals(2, $data[1]->id);
+        $this->assertEquals('Pharmacy', $data[1]->title);
+        $this->assertEquals(3, $data[2]->id);
+        $this->assertEquals('Dentistry', $data[2]->title);
+        $this->assertEquals(4, $data[3]->id);
+        $this->assertEquals('Nursing', $data[3]->title);
+        $this->assertEquals(5, $data[4]->id);
+        $this->assertEquals('Other', $data[4]->title);
+    }
 
     /**
      * Tests retrieving a resource by its ID from the Ilios API.

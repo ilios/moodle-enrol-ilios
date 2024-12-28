@@ -46,6 +46,11 @@ class ilios {
     const API_BASE_PATH = '/api/v3/';
 
     /**
+     * @var int The maximum number of filtering request parameters in a given API request.
+     */
+    const MAX_FILTER_PARAMS = 250;
+
+    /**
      * @var string The API access token.
      */
     protected string $accesstoken;
@@ -317,11 +322,10 @@ class ilios {
         return array_values($instructorids);
     }
 
-
     /**
      * Sends a GET request to a given API endpoint with given options.
      *
-     * @param string $path The target path fragment of the API request URL. May include query parameters.
+     * @param string $path The target path fragment of the API request URL.
      * @param string $key The name of the property that holds the requested data points in the payload.
      * @param array $filterby An associative array of filter options.
      * @param array $sortby An associative array of sort options.
@@ -338,43 +342,30 @@ class ilios {
         $this->validate_access_token($this->accesstoken);
         $options = ['headers' => ['X-JWT-Authorization' => 'Token ' . $this->accesstoken]];
 
+        $url = $this->apibaseurl . $path;
+
         // Construct query params from given filters and sort orders.
         // Unfortunately, <code>http_build_query()</code> doesn't cut it here, so we have to hand-roll this.
-        $queryparams = [];
+        $filterparams = [];
         if (!empty($filterby)) {
             foreach ($filterby as $param => $value) {
                 if (is_array($value)) {
                     foreach ($value as $val) {
-                        $queryparams[] = "filters[$param][]=$val";
+                        $filterparams[] = "filters[$param][]=$val";
                     }
                 } else {
-                    $queryparams[] = "filters[$param]=$value";
+                    $filterparams[] = "filters[$param]=$value";
                 }
             }
         }
-
+        $sortparams = [];
         if (!empty($sortby)) {
             foreach ($sortby as $param => $value) {
-                $queryparams[] = "order_by[$param]=$value";
+                $sortparams[] = "order_by[$param]=$value";
             }
         }
 
-        $url = $this->apibaseurl . $path;
-
-        if (!empty($queryparams)) {
-            $url .= '?' . implode('&', $queryparams);
-        }
-
-        $response = $this->httpclient->get($url, $options);
-        $rhett = $this->parse_result($response->getBody());
-        if (!property_exists($rhett, $key)) {
-            throw new moodle_exception(
-                'errorresponseentitynotfound',
-                'enrol_ilios',
-                a: $key,
-            );
-        }
-        return $rhett->$key;
+        return $this->send_get_request($url, $key, $options, $filterparams, $sortparams);
     }
 
     /**
@@ -420,6 +411,57 @@ class ilios {
             // Re-throw the exception otherwise.
             throw $e;
         }
+    }
+
+    /**
+     * Internal helper method for sending a GET request to the Ilios API.
+     *
+     * @param string $url The API request URL. May include query parameters.
+     * @param string $key The name of the property that holds the requested data points in the payload.
+     * @param array $options API Client options, such as header values.
+     * @param array $filterparams An associative array of filtering request parameters.
+     * @param array $sortparams An associative array of sorting request parameters.
+     * @return array The data points from the decoded payload.
+     * @throws GuzzleException
+     * @throws moodle_exception
+     */
+    protected function send_get_request(
+        string $url,
+        string $key,
+        array $options = [],
+        array $filterparams = [],
+        array $sortparams = []
+    ): array {
+        // Batch processing comes first.
+        // If the number of request parameters exceeds the given limit,
+        // we must chunk them up into smaller lists and run then individually, followed by results aggregation.
+        // This is done by recursively calling this method with chunked filtering options.
+        if (count($filterparams) > self::MAX_FILTER_PARAMS) {
+            $batches = array_chunk($filterparams, self::MAX_FILTER_PARAMS);
+            $results = [];
+            foreach ($batches as $batch) {
+                $result = $this->send_get_request($url, $key, $options, $batch, $sortparams);
+                $results = array_merge($results, $result);
+            }
+            return $results;
+        }
+
+        $queryparams = array_merge($filterparams, $sortparams);
+
+        if (!empty($queryparams)) {
+            $url .= '?' . implode('&', $queryparams);
+        }
+
+        $response = $this->httpclient->get($url, $options);
+        $rhett = $this->parse_result($response->getBody());
+        if (!property_exists($rhett, $key)) {
+            throw new moodle_exception(
+                'errorresponseentitynotfound',
+                'enrol_ilios',
+                a: $key,
+            );
+        }
+        return $rhett->$key;
     }
 
     /**
