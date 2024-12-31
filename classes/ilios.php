@@ -46,6 +46,11 @@ class ilios {
     const API_BASE_PATH = '/api/v3/';
 
     /**
+     * @var int The maximum number of filtering request parameters in a given API request.
+     */
+    const MAX_FILTER_PARAMS = 250;
+
+    /**
      * @var string The API access token.
      */
     protected string $accesstoken;
@@ -79,8 +84,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_schools(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('schools', $filterby, $sortby);
-        return $response->schools;
+        return $this->get('schools', 'schools', $filterby, $sortby);
     }
 
     /**
@@ -93,8 +97,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_cohorts(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('cohorts', $filterby, $sortby);
-        return $response->cohorts;
+        return $this->get('cohorts', 'cohorts', $filterby, $sortby);
     }
 
     /**
@@ -107,8 +110,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_programs(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('programs', $filterby, $sortby);
-        return $response->programs;
+        return $this->get('programs', 'programs', $filterby, $sortby);
     }
 
     /**
@@ -121,8 +123,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_program_years(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('programyears', $filterby, $sortby);
-        return $response->programYears;
+        return $this->get('programyears', 'programYears', $filterby, $sortby);
     }
 
     /**
@@ -135,8 +136,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_learner_groups(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('learnergroups', $filterby, $sortby);
-        return $response->learnerGroups;
+        return $this->get('learnergroups', 'learnerGroups', $filterby, $sortby);
     }
 
     /**
@@ -149,8 +149,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_instructor_groups(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('instructorgroups', $filterby, $sortby);
-        return $response->instructorGroups;
+        return $this->get('instructorgroups', 'instructorGroups', $filterby, $sortby);
     }
 
     /**
@@ -163,8 +162,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_offerings(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('offerings', $filterby, $sortby);
-        return $response->offerings;
+        return $this->get('offerings', 'offerings', $filterby, $sortby);
     }
 
     /**
@@ -177,8 +175,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_ilms(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('ilmsessions', $filterby, $sortby);
-        return $response->ilmSessions;
+        return $this->get('ilmsessions', 'ilmSessions', $filterby, $sortby);
     }
 
     /**
@@ -191,8 +188,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_users(array $filterby = [], array $sortby = []): array {
-        $response = $this->get('users', $filterby, $sortby);
-        return $response->users;
+        return $this->get('users', 'users', $filterby, $sortby);
     }
 
     /**
@@ -204,11 +200,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_school(int $id): ?object {
-        $response = $this->get_by_id('schools', $id);
-        if ($response) {
-            return $response->schools[0];
-        }
-        return null;
+        return $this->get_by_id('schools', 'schools', $id);
     }
 
     /**
@@ -220,11 +212,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_cohort(int $id): ?object {
-        $response = $this->get_by_id('cohorts', $id);
-        if ($response) {
-            return $response->cohorts[0];
-        }
-        return null;
+        return $this->get_by_id('cohorts', 'cohorts', $id);
     }
 
     /**
@@ -236,11 +224,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_program(int $id): ?object {
-        $response = $this->get_by_id('programs', $id);
-        if ($response) {
-            return $response->programs[0];
-        }
-        return null;
+        return $this->get_by_id('programs', 'programs', $id);
     }
 
     /**
@@ -252,11 +236,7 @@ class ilios {
      * @throws moodle_exception
      */
     public function get_learner_group(int $id): ?object {
-        $response = $this->get_by_id('learnergroups', $id);
-        if ($response) {
-            return $response->learnerGroups[0];
-        }
-        return null;
+        return $this->get_by_id('learnergroups', 'learnerGroups', $id);
     }
 
     /**
@@ -342,54 +322,50 @@ class ilios {
         return array_values($instructorids);
     }
 
-
     /**
      * Sends a GET request to a given API endpoint with given options.
      *
-     * @param string $path The target path fragment of the API request URL. May include query parameters.
+     * @param string $path The target path fragment of the API request URL.
+     * @param string $key The name of the property that holds the requested data points in the payload.
      * @param array $filterby An associative array of filter options.
      * @param array $sortby An associative array of sort options.
-     * @return object The decoded response body.
+     * @return array The data points from the decoded payload.
      * @throws GuzzleException
      * @throws moodle_exception
      */
     public function get(
         string $path,
+        string $key,
         array $filterby = [],
         array $sortby = [],
-    ): object {
+    ): array {
         $this->validate_access_token($this->accesstoken);
         $options = ['headers' => ['X-JWT-Authorization' => 'Token ' . $this->accesstoken]];
 
+        $url = $this->apibaseurl . $path;
+
         // Construct query params from given filters and sort orders.
         // Unfortunately, <code>http_build_query()</code> doesn't cut it here, so we have to hand-roll this.
-        $queryparams = [];
+        $filterparams = [];
         if (!empty($filterby)) {
             foreach ($filterby as $param => $value) {
                 if (is_array($value)) {
                     foreach ($value as $val) {
-                        $queryparams[] = "filters[$param][]=$val";
+                        $filterparams[] = "filters[$param][]=$val";
                     }
                 } else {
-                    $queryparams[] = "filters[$param]=$value";
+                    $filterparams[] = "filters[$param]=$value";
                 }
             }
         }
-
+        $sortparams = [];
         if (!empty($sortby)) {
             foreach ($sortby as $param => $value) {
-                $queryparams[] = "order_by[$param]=$value";
+                $sortparams[] = "order_by[$param]=$value";
             }
         }
 
-        $url = $this->apibaseurl . $path;
-
-        if (!empty($queryparams)) {
-            $url .= '?' . implode('&', $queryparams);
-        }
-
-        $response = $this->httpclient->get($url, $options);
-        return $this->parse_result($response->getBody());
+        return $this->send_get_request($url, $key, $options, $filterparams, $sortparams);
     }
 
     /**
@@ -415,6 +391,7 @@ class ilios {
      * Retrieves a given resource from Ilios by its given ID.
      *
      * @param string $path The URL path fragment that names the resource.
+     * @param string $key The name of the property that holds the requested data points in the payload.
      * @param int $id The ID.
      * @param bool $returnnullonnotfound If TRUE then NULL is returned if the resource cannot be found.
      *                                      On FALSE, an exception is raised on 404/Not-Found.
@@ -423,9 +400,10 @@ class ilios {
      * @throws GuzzleException
      * @throws moodle_exception
      */
-    public function get_by_id(string $path, int $id, bool $returnnullonnotfound = true): ?object {
+    public function get_by_id(string $path, string $key, int $id, bool $returnnullonnotfound = true): ?object {
         try {
-            return $this->get($path . '/' . $id);
+            $response = $this->get($path . '/' . $id, $key);
+            return $response[0];
         } catch (ClientException $e) {
             if ($returnnullonnotfound && (404 === $e->getResponse()->getStatusCode())) {
                 return null;
@@ -433,6 +411,57 @@ class ilios {
             // Re-throw the exception otherwise.
             throw $e;
         }
+    }
+
+    /**
+     * Internal helper method for sending a GET request to the Ilios API.
+     *
+     * @param string $url The API request URL. May include query parameters.
+     * @param string $key The name of the property that holds the requested data points in the payload.
+     * @param array $options API Client options, such as header values.
+     * @param array $filterparams An associative array of filtering request parameters.
+     * @param array $sortparams An associative array of sorting request parameters.
+     * @return array The data points from the decoded payload.
+     * @throws GuzzleException
+     * @throws moodle_exception
+     */
+    protected function send_get_request(
+        string $url,
+        string $key,
+        array $options = [],
+        array $filterparams = [],
+        array $sortparams = []
+    ): array {
+        // Batch processing comes first.
+        // If the number of request parameters exceeds the given limit,
+        // we must chunk them up into smaller lists and run then individually, followed by results aggregation.
+        // This is done by recursively calling this method with chunked filtering options.
+        if (count($filterparams) > self::MAX_FILTER_PARAMS) {
+            $batches = array_chunk($filterparams, self::MAX_FILTER_PARAMS);
+            $results = [];
+            foreach ($batches as $batch) {
+                $result = $this->send_get_request($url, $key, $options, $batch, $sortparams);
+                $results = array_merge($results, $result);
+            }
+            return $results;
+        }
+
+        $queryparams = array_merge($filterparams, $sortparams);
+
+        if (!empty($queryparams)) {
+            $url .= '?' . implode('&', $queryparams);
+        }
+
+        $response = $this->httpclient->get($url, $options);
+        $rhett = $this->parse_result($response->getBody());
+        if (!property_exists($rhett, $key)) {
+            throw new moodle_exception(
+                'errorresponseentitynotfound',
+                'enrol_ilios',
+                a: $key,
+            );
+        }
+        return $rhett->$key;
     }
 
     /**
