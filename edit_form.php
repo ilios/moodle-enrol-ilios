@@ -143,7 +143,8 @@ class enrol_ilios_edit_form extends moodleform {
                             &$processparents,
                             &$learnergroupoptions,
                             &$grouptitle,
-                            &$instance
+                            &$instance,
+                            $ilios
                         ) {
                             $parentgroup = $ilios->get_learner_group($child->parent);
                             $instance->learnergroupid = $parentgroup->id;
@@ -444,7 +445,7 @@ class enrol_ilios_edit_form extends moodleform {
                                                                    ' ('. count($subgroup->children) .')'.
                                                                    ' ('. count($subgroup->users) .')';
                 if (!empty($subgroup->children)) {
-                    $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions) {
+                    $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $ilios) {
                         $subgrps = $ilios->get_learner_groups([ 'parent' => $parent->id], [ 'title' => "ASC"]);
                         foreach ($subgrps as $subgrp) {
                             $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
