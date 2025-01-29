@@ -1856,9 +1856,8 @@ final class lib_test extends \advanced_testcase {
         // No need to check enrolments, nothing happened during the sync.
     }
 
-
     /**
-     * Test that disabled enrollment instances do not get processed.
+     * Test that users without campus ID are filtered out from the sync.
      */
     public function test_sync_ignore_ilios_users_without_campus_id(): void {
         global $CFG, $DB;
@@ -1912,7 +1911,7 @@ final class lib_test extends \advanced_testcase {
                 'roleid' => $studentrole->id,
             ]
         );
-        $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
 
         // Run enrolment sync.
@@ -1925,6 +1924,9 @@ final class lib_test extends \advanced_testcase {
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
         $this->assertStringContainsString("skipping: Ilios user 1 does not have a 'campusId' field.", $output);
+
+        // Check enrollments. There shouldn't be any.
+        $this->assertEquals(0, $DB->count_records('user_enrolments', ['enrolid' => $instance->id]));
     }
 
     /**
