@@ -1856,6 +1856,77 @@ final class lib_test extends \advanced_testcase {
         // No need to check enrolments, nothing happened during the sync.
     }
 
+
+    /**
+     * Test that disabled enrollment instances do not get processed.
+     */
+    public function test_sync_ignore_ilios_users_without_campus_id(): void {
+        global $CFG, $DB;
+        $this->resetAfterTest();
+
+        // Configure the Ilios API client.
+        $accesstoken = helper::create_valid_ilios_api_access_token();
+        set_config('apikey', $accesstoken, 'enrol_ilios');
+        set_config('host_url', 'http://ilios.demo', 'enrol_ilios');
+
+        // Mock out the responses from the Ilios API.
+        $handlerstack = HandlerStack::create(new MockHandler([
+            new Response(200, [], json_encode([
+                'cohorts' => [
+                    [
+                        'id' => 1,
+                        'users' => ['1'],
+                    ],
+                ],
+            ])),
+            new Response(200, [], json_encode([
+                'users' => [
+                    [
+                        'id' => 1,
+                        'campusId' => null,
+                        'enabled' => true,
+                    ],
+                ],
+            ])),
+        ]));
+        $container = [];
+        $history = Middleware::history($container);
+        $handlerstack->push($history);
+        di::set(http_client::class, new http_client(['handler' => $handlerstack]));
+
+        // Get a handle of the enrolment handler.
+        $plugin = enrol_get_plugin('ilios');
+
+        // Minimal setup here, one course without user enrolments.
+        $course = $this->getDataGenerator()->create_course();
+        $studentrole = $DB->get_record('role', ['shortname' => 'student']);
+        $this->assertNotEmpty($studentrole);
+
+        // Instantiate an enrolment instance that targets cohort members in Ilios.
+        $ilioscohortid = 1; // Ilios cohort ID.
+        $synctype = 'cohort'; // Enrol from cohort.
+        $plugin->add_instance($course, [
+                'customint1' => $ilioscohortid,
+                'customint2' => 0,
+                'customchar1' => $synctype,
+                'roleid' => $studentrole->id,
+            ]
+        );
+        $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
+        $CFG->enrol_plugins_enabled = 'ilios';
+
+        // Run enrolment sync.
+        $trace = new progress_trace_buffer(new text_progress_trace(), false);
+        $this->assertEquals(0, $plugin->sync($trace, null));
+        $output = $trace->get_buffer();
+        $trace->finished();
+        $trace->reset_buffer();
+
+        // Check the logging output.
+        $this->assertStringContainsString('1 Ilios users found.', $output);
+        $this->assertStringContainsString("skipping: Ilios user 1 does not have a 'campusId' field.", $output);
+    }
+
     /**
      * Test group enrolment during sync.
      */
