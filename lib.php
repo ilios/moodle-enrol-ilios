@@ -695,7 +695,7 @@ class enrol_ilios_plugin extends enrol_plugin {
      * @return array The given array of Ilios user records, with duplicates removed.
      */
     protected function deduplicate_ilios_users(array $users): array {
-        // Reverse-sort users by their user ID. In other words, most from most-recently created to oldest.
+        // Reverse-sort users by their user ID. In other words, from most-recently created to oldest.
         array_multisort(array_column($users, 'id'), SORT_DESC, SORT_NUMERIC, $users);
         $cache = [];
         foreach ($users as $user) {
