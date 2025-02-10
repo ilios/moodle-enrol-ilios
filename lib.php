@@ -692,18 +692,23 @@ class enrol_ilios_plugin extends enrol_plugin {
      * 2. If all duplicates are inactive user records, then use the most recently created one.
      * 3. If there is a mix between active and inactive user records, then use the most recently created active one.
      * @param array $users An array of Ilios user records.
+     * @param progress_trace $trace A logger ("trace") object.
      * @return array The given array of Ilios user records, with duplicates removed.
      */
-    protected function deduplicate_ilios_users(array $users): array {
+    protected function deduplicate_ilios_users(array $users, progress_trace $trace): array {
         // Reverse-sort users by their user ID. In other words, from most-recently created to oldest.
         array_multisort(array_column($users, 'id'), SORT_DESC, SORT_NUMERIC, $users);
         $cache = [];
+        $duplicatekeys = [];
         foreach ($users as $user) {
             $key = $user->campusId;
             // If this is the first time we encounter this user, cache them and move on.
             if (!array_key_exists($key, $cache)) {
                 $cache[$key] = $user;
                 continue;
+            } else {
+                // Track the duplicate campus id.
+                $duplicatekeys[] = $key;
             }
 
             // And now we're dealing with duplicates.
@@ -712,6 +717,15 @@ class enrol_ilios_plugin extends enrol_plugin {
             if (!$cache[$key]->enabled && $user->enabled) {
                 $cache[$key] = $user;
             }
+        }
+
+        // Log the duplicate campus IDs.
+        if (!empty($duplicatekeys)) {
+            sort($duplicatekeys);
+            $trace->output(
+                'Duplicate Ilios user records found, with the following campus IDs: '
+                . implode(', ', array_unique($duplicatekeys))
+            );
         }
 
         return array_values($cache);

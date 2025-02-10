@@ -2142,6 +2142,11 @@ final class lib_test extends \advanced_testcase {
             "unassigning role: {$user5->id} ==> {$course->id} as {$studentrole->shortname}",
             $output,
         );
+        $this->assertStringContainsString(
+            'Duplicate Ilios user records found, with the following campus IDs: '
+            . 'xx1000001, xx1000002, xx1000003, xx1000004, xx1000005',
+            $output
+        );
 
         // Check user enrollments and role assignments post-sync.
         // Users 1-4 should still be actively enrolled as students.
@@ -2201,6 +2206,11 @@ final class lib_test extends \advanced_testcase {
         $trace->reset_buffer();
 
         // Check the logging output.
+        $this->assertStringContainsString(
+            'Duplicate Ilios user records found, with the following campus IDs: '
+            . 'xx1000001, xx1000002, xx1000003, xx1000004, xx1000005',
+            $output
+        );
         // There should be nothing in there pertaining to new (un-)enrollments nor role (un-)assignments.
         $this->assertStringNotContainsString('unenrolling:', $output);
         $this->assertStringNotContainsString('unassigning role:', $output);
