@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Strings for component 'enrol_ilios', language 'en_us'.
+ * Strings for component 'enrol_ilios', language 'en'.
  *
  * @package    enrol_ilios
  * @author     Carson Tam <carson.tam@ucsf.edu>
@@ -24,17 +24,17 @@
  */
 
 $string['addgroup'] = 'Add to group';
-$string['addgroup_help'] = 'If selected, then users are added to the specified user-group as part of their enrollment into this course.';
+$string['addgroup_help'] = 'If chosen, users are added to the specified group when they enroll in this course.';
 $string['ajaxmore'] = 'More...';
 $string['apikey'] = 'Ilios API key';
 $string['apikey_desc'] = 'Enter the API key obtained from your Ilios server.';
 $string['assignrole'] = 'Assign role';
-$string['assignrole_help'] = 'If selected, then users are enrolled with the specified user-role into this course.';
+$string['assignrole_help'] = 'If chosen, users are enrolled in this course with the specified role.';
 $string['cohort'] = 'Program year/Cohort (groups) (learners)';
-$string['cohort_help'] = 'This corresponds to the Cohorts in Ilios.';
+$string['cohort_help'] = 'This matches to the "Cohorts" section in Ilios.';
 $string['cohortoptionsupdate'] = 'Update cohort options';
 $string['custominstancename'] = 'Custom instance name';
-$string['custominstancename_help'] = 'The name of this enrollment instance. If left empty, then Moodle will auto-generate a name based on user selections made below.';
+$string['custominstancename_help'] = "The name for this enrollment. If you don't enter a name, Moodle will create one automatically based on your choices below.";
 $string['defaultinstructorrole'] = 'Default instructor role';
 $string['defaultlearnerrole'] = 'Default learner role';
 $string['enrol'] = 'Enroll Ilios users';
@@ -56,28 +56,28 @@ $string['ilios:unenrol'] = 'Unenroll suspended users';
 $string['ilioscohorts'] = 'Cohorts';
 $string['iliosgroups'] = 'Groups';
 $string['iliosgroupsearch'] = 'Search';
-$string['iliossync'] = 'Ilios enrolment sync';
+$string['iliossync'] = 'Ilios enrollment sync';
 $string['instanceexists'] = 'Ilios sync is already synchronized with selected role';
 $string['instructor'] = 'Instructor';
 $string['learner'] = 'Learner';
 $string['learnergroup'] = 'Learner group (sub-groups) (learners)';
-$string['learnergroup_help'] = 'This corresponds to the Learner groups in Ilios';
+$string['learnergroup_help'] = 'This matches to the "Learner Groups" section in Ilios.';
 $string['learnergroupoptionsupdate'] = 'Update learner group options';
 $string['orphanedlearnergroup'] = '<span class="alert alert-warning">Invalid current value: {$a}</span>';
 $string['pluginname'] = 'Ilios sync';
-$string['pluginname_desc'] = 'Ilios sync plugin synchronises members with course participants.';
+$string['pluginname_desc'] = 'Ilios sync plugin synchronizes members with course participants.';
 $string['pluginshortname'] = 'Ilios';
 $string['privacy:metadata'] = 'The Ilios enrollment plugin does not store any personal data.';
 $string['program'] = 'Program';
-$string['program_help'] = 'This corresponds to the Programs in Ilios.';
+$string['program_help'] = 'This matches to the "Programs" section in Ilios.';
 $string['programoptionsupdate'] = 'Update program options';
 $string['requiredforinstructor'] = 'Required for instructor';
 $string['school'] = 'School';
-$string['school_help'] = 'This corresponds to the Schools in Ilios.';
+$string['school_help'] = 'This matches to the "Schools" section in Ilios.';
 $string['schooloptionsupdate'] = 'Update school options';
 $string['selectusertype'] = 'User type';
-$string['selectusertype_help'] = 'Select an Ilios user type to sync. Note that only the number of Ilios Learners is noted in the menus below.';
+$string['selectusertype_help'] = 'Choose an Ilios user type to sync. Only the number of Ilios Learners is shown in the menus below.';
 $string['status'] = 'Active';
-$string['status_help'] = 'If set to "Yes", then this enrollment sync instance is active. To deactivate this sync, set this to "No".';
+$string['status_help'] = 'If you choose "Yes", this enrollment sync is active. To turn it off, choose "No".';
 $string['subgroup'] = 'Sub-group (sub-groups) (learners)';
-$string['subgroup_help'] = 'This corresponds to the Sub-groups in Ilios.';
+$string['subgroup_help'] = 'This matches to the "Sub-Groups" section in Ilios.';
