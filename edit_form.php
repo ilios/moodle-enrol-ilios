@@ -57,17 +57,6 @@ class enrol_ilios_edit_form extends moodleform {
         list($instance, $plugin, $course, $ilios) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
-        $PAGE->requires->yui_module(
-            'moodle-enrol_ilios-groupchoosers',
-            'M.enrol_ilios.init_groupchoosers',
-            [
-                [
-                    'formid' => $mform->getAttribute('id'),
-                    'courseid' => $course->id,
-                ],
-            ]
-        );
-
         $enrol = $plugin;
 
         $mform->addElement('header', 'general', get_string('pluginname', 'enrol_ilios'));
@@ -90,7 +79,6 @@ class enrol_ilios_edit_form extends moodleform {
         $learnergroupoptions = ['' => get_string('none')];
         $hasorphanedlearnergroup = false;
         $subgroupoptions = ['' => get_string('none')];
-        $instructorgroupoptions = ['' => get_string('none')];
 
         if ($instance->id) {
             $synctype = $instance->customchar1;
@@ -167,6 +155,11 @@ class enrol_ilios_edit_form extends moodleform {
                     $hasorphanedlearnergroup = true;
                 }
             }
+        } else {
+            $PAGE->requires->js_call_amd('enrol_ilios/main', 'init', [
+                    $course->id,
+                ],
+            );
         }
 
         $mform->addElement('select', 'selectusertype', get_string('selectusertype', 'enrol_ilios'), $usertypes);
@@ -183,8 +176,6 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->hardFreeze('selectschool');
         } else {
             $mform->addRule('selectschool', get_string('required'), 'required', null, 'client');
-            $mform->registerNoSubmitButton('updateschooloptions');
-            $mform->addElement('submit', 'updateschooloptions', get_string('schooloptionsupdate', 'enrol_ilios'));
         }
 
         $mform->addElement('select', 'selectprogram', get_string('program', 'enrol_ilios'), $programoptions);
@@ -196,8 +187,6 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $mform->addRule('selectprogram', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectprogram', 'selectschool', 'eq', '');
-            $mform->registerNoSubmitButton('updateprogramoptions');
-            $mform->addElement('submit', 'updateprogramoptions', get_string('programoptionsupdate', 'enrol_ilios'));
         }
 
         $mform->addElement('select', 'selectcohort', get_string('cohort', 'enrol_ilios'), $cohortoptions);
@@ -209,8 +198,6 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $mform->addRule('selectcohort', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectcohort', 'selectprogram', 'eq', '');
-            $mform->registerNoSubmitButton('updatecohortoptions');
-            $mform->addElement('submit', 'updatecohortoptions', get_string('cohortoptionsupdate', 'enrol_ilios'));
         }
 
         $mform->addElement('select', 'selectlearnergroup', get_string('learnergroup', 'enrol_ilios'), $learnergroupoptions);
@@ -221,8 +208,6 @@ class enrol_ilios_edit_form extends moodleform {
 
         } else {
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
-            $mform->registerNoSubmitButton('updatelearnergroupoptions');
-            $mform->addElement('submit', 'updatelearnergroupoptions', get_string('learnergroupoptionsupdate', 'enrol_ilios'));
         }
 
         if ($hasorphanedlearnergroup) {
@@ -240,8 +225,6 @@ class enrol_ilios_edit_form extends moodleform {
             $mform->hardFreeze('selectsubgroup');
         } else {
             $mform->disabledIf('selectsubgroup', 'selectlearnergroup', 'eq', '');
-            $mform->registerNoSubmitButton('updatesubgroupoptions');
-            $mform->addElement('submit', 'updatesubgroupoptions', 'Update subgroup option');
         }
 
         // Role assignment.

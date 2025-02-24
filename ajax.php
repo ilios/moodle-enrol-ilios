@@ -163,22 +163,6 @@ switch ($action) {
         $outcome->response = $subgroupoptions;
         break;
 
-    case 'getselectinstructorgroupoptions':
-        require_capability('moodle/course:enrolconfig', $context);
-        $gid = required_param('filterid', PARAM_INT); // Group ID.
-        $instructorgroupoptions = [];
-        $learnergroup = $ilios->get_learner_group('learnerGroups', $gid);
-        if (!empty($learnergroup->instructorGroups)) {
-            $instructorgroups = $ilios->get_instructor_groups(sortby: ["title" => "ASC"]);
-            foreach ($instructorgroups as $instructorgroup) {
-                $instructorgroupoptions["$instructorgroup->id:$instructorgroup->title"] = $instructorgroup->title.
-                                                                                        ' ('. count($instructorgroup->users) .')';
-            }
-        }
-
-        $outcome->response = $instructorgroupoptions;
-        break;
-
     default:
         throw new enrol_ajax_exception('unknowajaxaction');
 }
