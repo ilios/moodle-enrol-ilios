@@ -57,17 +57,6 @@ class enrol_ilios_edit_form extends moodleform {
         list($instance, $plugin, $course, $ilios) = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
-        $PAGE->requires->yui_module(
-            'moodle-enrol_ilios-groupchoosers',
-            'M.enrol_ilios.init_groupchoosers',
-            [
-                [
-                    'formid' => $mform->getAttribute('id'),
-                    'courseid' => $course->id,
-                ],
-            ]
-        );
-
         $enrol = $plugin;
 
         $mform->addElement('header', 'general', get_string('pluginname', 'enrol_ilios'));
@@ -166,6 +155,17 @@ class enrol_ilios_edit_form extends moodleform {
                     $hasorphanedlearnergroup = true;
                 }
             }
+        } else {
+            $PAGE->requires->yui_module(
+                'moodle-enrol_ilios-groupchoosers',
+                'M.enrol_ilios.init_groupchoosers',
+                [
+                    [
+                        'formid' => $mform->getAttribute('id'),
+                        'courseid' => $course->id,
+                    ],
+                ]
+            );
         }
 
         $mform->addElement('select', 'selectusertype', get_string('selectusertype', 'enrol_ilios'), $usertypes);
