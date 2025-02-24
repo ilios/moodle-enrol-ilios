@@ -156,15 +156,9 @@ class enrol_ilios_edit_form extends moodleform {
                 }
             }
         } else {
-            $PAGE->requires->yui_module(
-                'moodle-enrol_ilios-groupchoosers',
-                'M.enrol_ilios.init_groupchoosers',
-                [
-                    [
-                        'formid' => $mform->getAttribute('id'),
-                        'courseid' => $course->id,
-                    ],
-                ]
+            $PAGE->requires->js_call_amd('enrol_ilios/main', 'init', [
+                    $course->id,
+                ],
             );
         }
 
