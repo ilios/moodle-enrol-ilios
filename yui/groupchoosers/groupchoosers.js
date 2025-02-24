@@ -3,22 +3,9 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
         GROUPCHOOSERS.superclass.constructor.apply(this, arguments);
     };
 
-  // GROUPCHOOSERS.prototype = {
-  //      getnextoptions : function(thisselect, nextselect, btn) {
-  //       // clear next select first
-  //       nextselect.set('value', '');
-  //       btn.simulate('click');
-  //     }
-  // };
-
     Y.extend(GROUPCHOOSERS, Y.Base, {
       initializer : function(params) {
             if (params && params.formid && params.courseid) {
-              var selectbuttons = { "selectschool"      : "updateschool",
-                                    "selectprogram"     : "updateprogram",
-                                    "selectcohort"      : "updatecohort",
-                                    "selectlearnergroup": "updatelearnergroup",
-                                    "selectsubgroup"    : "updatesubgroup" };
               var selectnexts = { "selectschool"      : "selectprogram",
                                   "selectprogram"     : "selectcohort",
                                   "selectcohort"      : "selectlearnergroup",
@@ -27,9 +14,6 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
 
               for (var sel in selectnexts) {
                 var thisselect = Y.one('#'+params.formid+' #id_' + sel);
-                var updatebutton = Y.one('#'+params.formid+' #id_'+ selectbuttons[sel] + 'options');
-
-                updatebutton.setStyle('display', 'none');
 
                 thisselect.on('change', function(e) {
                   var elementname = e.currentTarget.get('name');
@@ -41,7 +25,6 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
 
                   var hasid = elementvalue.indexOf(':');
                   var nextselect = Y.one('#'+params.formid+' #id_' + selectnexts[elementname]);
-
                   while (nextselect) {
                     nextselect.set('value', '');
                     nextselect.all('option').slice(1).remove();
@@ -80,10 +63,6 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
                       var request = Y.io(M.cfg.wwwroot+uri);
 
                     });
-
-                  // Old way, not so ajaxy
-                  //var updatebutton = Y.one('#'+params.formid+' #id_'+ selectbuttons[elementname] + 'options');
-                  //updatebutton.simulate('click');
                   }
                 });
               }
