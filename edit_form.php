@@ -90,7 +90,6 @@ class enrol_ilios_edit_form extends moodleform {
         $learnergroupoptions = ['' => get_string('none')];
         $hasorphanedlearnergroup = false;
         $subgroupoptions = ['' => get_string('none')];
-        $instructorgroupoptions = ['' => get_string('none')];
 
         if ($instance->id) {
             $synctype = $instance->customchar1;

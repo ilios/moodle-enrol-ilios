@@ -9,8 +9,7 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
               var selectnexts = { "selectschool"      : "selectprogram",
                                   "selectprogram"     : "selectcohort",
                                   "selectcohort"      : "selectlearnergroup",
-                                  "selectlearnergroup": "selectsubgroup",
-                                  "selectsubgroup"    : "selectinstructorgroup" };
+                                  "selectlearnergroup": "selectsubgroup" };
 
               for (var sel in selectnexts) {
                 var thisselect = Y.one('#'+params.formid+' #id_' + sel);
@@ -18,11 +17,6 @@ YUI.add('moodle-enrol_ilios-groupchoosers', function(Y) {
                 thisselect.on('change', function(e) {
                   var elementname = e.currentTarget.get('name');
                   var elementvalue = e.currentTarget.get('value');
-                  var selectnexts = { "selectschool"      : "selectprogram",
-                                      "selectprogram"     : "selectcohort",
-                                      "selectcohort"      : "selectlearnergroup",
-                                      "selectlearnergroup": "selectsubgroup" };
-
                   var hasid = elementvalue.indexOf(':');
                   var nextselect = Y.one('#'+params.formid+' #id_' + selectnexts[elementname]);
                   while (nextselect) {
