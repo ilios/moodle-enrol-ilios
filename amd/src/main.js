@@ -38,10 +38,10 @@ export const init = (courseId) => {
     const CALLBACK_SCRIPT = '/enrol/ilios/ajax.php';
 
     /**
-     * The ID of the usertype dropdown.
+     * The name of the usertype dropdown selector in this form.
      * @type {string}
      */
-    const USERTYPE_FORMFIELD_ID = 'id_selectusertype';
+    const USERTYPE_SELECTOR = 'selectusertype';
 
     /**
      * The names of the dropdown selectors in this form.
@@ -149,7 +149,7 @@ export const init = (courseId) => {
      * @returns {String} The selected user type.
      */
     const getUserType = function() {
-        return document.getElementById(USERTYPE_FORMFIELD_ID).value;
+        return getElementForSelector(USERTYPE_SELECTOR).value;
     };
 
     /**
