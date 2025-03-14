@@ -82,6 +82,8 @@ export const init = (courseId) => {
      * @returns {String[]} The list of sub-selector names.
      */
     const getSubSelectors = function(selector) {
+        // Since the selectors array is hierarchical in nature, we can just grab and return a sub-list
+        // containing all selector names following the given one.
         return SELECTORS.slice(SELECTORS.indexOf(selector) + 1);
     };
 
