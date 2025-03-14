@@ -33,13 +33,13 @@ export const init = (courseId) => {
 
     /**
      * Path to the callback script.
-     * @type {string}
+     * @type {String}
      */
     const CALLBACK_SCRIPT = '/enrol/ilios/ajax.php';
 
     /**
      * The name of the usertype dropdown selector in this form.
-     * @type {string}
+     * @type {String}
      */
     const USERTYPE_SELECTOR = 'selectusertype';
 
