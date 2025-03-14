@@ -117,11 +117,31 @@ export const init = (courseId) => {
      * @param {Object} options A map of key/value pairs.
      */
     const populateSelector = function(selector, options) {
-        const element = getElementForSelector(selector);
+        const selectElement = getElementForSelector(selector);
+        // Convert object to array so we can sort values.
+        const temp = [];
         for (let key in options) {
-            const option = new Option(options[key], key);
-            element.appendChild(option);
+            const value = options[key];
+            temp.push({key, value});
         }
+        // Sort and append the options to the dropdown.
+        temp.sort((a, b) => {
+            // Compare values first.
+            let rhett = a.value.localeCompare(b.value);
+            if (rhett) {
+                return rhett;
+            }
+            // Fallback to key comparison if values are the same.
+            if (a.key > b.key) {
+                return 1;
+            } else if (a.key < b.key) {
+                return -1;
+            }
+            return 0;
+        }).forEach((option) => {
+            const optionEl = new Option(option.value, option.key);
+            selectElement.appendChild(optionEl);
+        });
     };
 
     /**
