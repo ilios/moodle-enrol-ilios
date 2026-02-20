@@ -26,7 +26,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($ADMIN->fulltree) {
-
     // General settings.
     $settings->add(new admin_setting_heading('enrol_ilios_settings', '', get_string('pluginname_desc', 'enrol_ilios')));
 

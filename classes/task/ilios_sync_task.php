@@ -35,7 +35,6 @@ use core\task\scheduled_task;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class ilios_sync_task extends scheduled_task {
-
     /**
      * Gets the task name.
      *

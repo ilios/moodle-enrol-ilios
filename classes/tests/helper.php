@@ -37,7 +37,6 @@ use Firebase\JWT\JWT;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class helper {
-
     /**
      * Generates an un-expired JWT, to be used as access token.
      * This token will pass client-side token validation.

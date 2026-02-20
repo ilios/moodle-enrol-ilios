@@ -55,7 +55,6 @@ $enrol = enrol_get_plugin('ilios');
 
 if ($instanceid) {
     $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios', 'id' => $instanceid], '*', MUST_EXIST);
-
 } else {
     // No instance yet, we have to add new instance.
     if (!$enrol->get_newinstance_link($course->id)) {
@@ -83,7 +82,6 @@ $mform = new enrol_ilios_edit_form(null, [$instance, $enrol, $course, $ilios]);
 
 if ($mform->is_cancelled()) {
     redirect($returnurl);
-
 } else if ($data = $mform->get_data()) {
     // We are here only because the form is submitted.
     $synctype = '';
@@ -92,19 +90,19 @@ if ($mform->is_cancelled()) {
 
     $selectvalue = isset($data->selectschool) ? $data->selectschool : '';
     if (!empty($selectvalue)) {
-        list($schoolid, $schooltitle) = explode( ":", $selectvalue, 2);
+        [$schoolid, $schooltitle] = explode(":", $selectvalue, 2);
         $syncinfo["school"] = ["id" => $schoolid, "title" => $schooltitle];
     }
 
     $selectvalue = isset($data->selectprogram) ? $data->selectprogram : '';
     if (!empty($selectvalue)) {
-        list($programid, $programshorttitle, $programtitle) = explode( ":", $selectvalue, 3);
+        [$programid, $programshorttitle, $programtitle] = explode(":", $selectvalue, 3);
         $syncinfo["program"] = ["id" => $programid, "shorttitle" => $programshorttitle, "title" => $programtitle];
     }
 
     $selectvalue = isset($data->selectcohort) ? $data->selectcohort : '';
     if (!empty($selectvalue)) {
-        list($cohortid, $cohorttitle) = explode( ":", $selectvalue, 2);
+        [$cohortid, $cohorttitle] = explode(":", $selectvalue, 2);
         $synctype = 'cohort';
         $syncid = $cohortid;
         $syncinfo["cohort"] = ["id" => $cohortid, "title" => $cohorttitle];
@@ -112,7 +110,7 @@ if ($mform->is_cancelled()) {
 
     $selectvalue = isset($data->selectlearnergroup) ? $data->selectlearnergroup : '';
     if (!empty($selectvalue)) {
-        list($learnergroupid, $learnergrouptitle) = explode( ":", $selectvalue, 2);
+        [$learnergroupid, $learnergrouptitle] = explode(":", $selectvalue, 2);
         $synctype = 'learnerGroup';
         $syncid = $learnergroupid;
         $syncinfo["learnerGroup"] = [ "id" => $learnergroupid, "title" => $learnergrouptitle ];
@@ -120,7 +118,7 @@ if ($mform->is_cancelled()) {
 
     $selectvalue = isset($data->selectsubgroup) ? $data->selectsubgroup : '';
     if (!empty($selectvalue)) {
-        list($subgroupid, $subgrouptitle) = explode( ":", $selectvalue, 2);
+        [$subgroupid, $subgrouptitle] = explode(":", $selectvalue, 2);
         $synctype = 'learnerGroup';
         $syncid = $subgroupid;
         $syncinfo["subGroup"] = [ "id" => $subgroupid, "title" => $subgrouptitle ];
@@ -145,7 +143,7 @@ if ($mform->is_cancelled()) {
         $instance->roleid       = $data->roleid;
         $instance->customchar1  = $synctype;
         $instance->customint1   = $syncid;
-        $instance->customint2   = $data->selectusertype;;
+        $instance->customint2   = $data->selectusertype;
         $instance->customtext1  = json_encode($syncinfo);
         $instance->customint6   = $data->customint6;
         $instance->timemodified = time();

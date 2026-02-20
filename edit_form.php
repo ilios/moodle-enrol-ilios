@@ -40,7 +40,6 @@ require_once("lib.php");
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class enrol_ilios_edit_form extends moodleform {
-
     /**
      * Form definition.
      *
@@ -54,7 +53,7 @@ class enrol_ilios_edit_form extends moodleform {
 
         $mform  = $this->_form;
         /* @var enrol_ilios_plugin $plugin This enrolment plugin. */
-        list($instance, $plugin, $course, $ilios) = $this->_customdata;
+        [$instance, $plugin, $course, $ilios] = $this->_customdata;
         $coursecontext = context_course::instance($course->id);
 
         $enrol = $plugin;
@@ -108,8 +107,8 @@ class enrol_ilios_edit_form extends moodleform {
             $instance->selectcohortindex = "$instance->cohortid:$cohort->title";
             $cohortoptions = [ $instance->selectcohortindex =>
                                     $cohort->title
-                                    .' ('.count($cohort->learnerGroups).')'
-                                    .' ('.count($cohort->users).')'];
+                                    . ' (' . count($cohort->learnerGroups) . ')'
+                                    . ' (' . count($cohort->users) . ')'];
 
             $instance->learnergroupid = '';
             $instance->selectlearnergroupindex = '';
@@ -122,9 +121,9 @@ class enrol_ilios_edit_form extends moodleform {
 
                 if ($group) {
                     $instance->selectlearnergroupindex = "$instance->learnergroupid:$group->title";
-                    $grouptitle = $group->title.
-                        ' ('. count($group->children) .')';
-                    $grouptitle .= ' ('. count($group->users) .')';
+                    $grouptitle = $group->title .
+                        ' (' . count($group->children) . ')';
+                    $grouptitle .= ' (' . count($group->users) . ')';
                     $learnergroupoptions = [$instance->selectlearnergroupindex => $grouptitle];
 
                     if (!empty($group->parent)) {
@@ -142,7 +141,7 @@ class enrol_ilios_edit_form extends moodleform {
                                 "$instance->learnergroupid:$parentgroup->title" => $parentgroup->title,
                             ];
                             if (!empty($parentgroup->parent)) {
-                                $grouptitle = $parentgroup->title . ' / '. $grouptitle;
+                                $grouptitle = $parentgroup->title . ' / ' . $grouptitle;
                                 $processparents($parentgroup);
                             }
                         };
@@ -158,8 +157,7 @@ class enrol_ilios_edit_form extends moodleform {
         } else {
             $PAGE->requires->js_call_amd('enrol_ilios/main', 'init', [
                     $course->id,
-                ],
-            );
+                ]);
         }
 
         $mform->addElement('select', 'selectusertype', get_string('selectusertype', 'enrol_ilios'), $usertypes);
@@ -183,7 +181,6 @@ class enrol_ilios_edit_form extends moodleform {
         if ($instance->id) {
             $mform->setConstant('selectprogram', $instance->selectprogramindex);
             $mform->hardFreeze('selectprogram');
-
         } else {
             $mform->addRule('selectprogram', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectprogram', 'selectschool', 'eq', '');
@@ -194,7 +191,6 @@ class enrol_ilios_edit_form extends moodleform {
         if ($instance->id) {
             $mform->setConstant('selectcohort', $instance->selectcohortindex);
             $mform->hardFreeze('selectcohort');
-
         } else {
             $mform->addRule('selectcohort', get_string('required'), 'required', null, 'client');
             $mform->disabledIf('selectcohort', 'selectprogram', 'eq', '');
@@ -205,7 +201,6 @@ class enrol_ilios_edit_form extends moodleform {
         if ($instance->id) {
             $mform->setConstant('selectlearnergroup', $instance->selectlearnergroupindex);
             $mform->hardFreeze('selectlearnergroup');
-
         } else {
             $mform->disabledIf('selectlearnergroup', 'selectcohort', 'eq', '');
         }
@@ -289,14 +284,14 @@ class enrol_ilios_edit_form extends moodleform {
             return;
         }
 
-        list($instance, $enrol, $course, $ilios) = $this->_customdata;
+        [$instance, $enrol, $course, $ilios] = $this->_customdata;
 
         $selectvalues = $mform->getElementValue('selectschool');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0], ':')) {
-                list($schoolid, $schooltitle) = explode(':', $selectvalues[0], 2);
+                [$schoolid, $schooltitle] = explode(':', $selectvalues[0], 2);
             } else {
-                list($schoolid, $schooltitle) = [$selectvalues[0], '', ''];
+                [$schoolid, $schooltitle] = [$selectvalues[0], '', ''];
             }
         } else {
             $schoolid = '';
@@ -306,21 +301,21 @@ class enrol_ilios_edit_form extends moodleform {
         $selectvalues = $mform->getElementValue('selectprogram');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0], ':')) {
-                list($programid, $programshorttitle, $programtitle) = explode(':', $selectvalues[0], 3);
+                [$programid, $programshorttitle, $programtitle] = explode(':', $selectvalues[0], 3);
             } else {
-                list($programid, $programshorttitle, $programtitle)
+                [$programid, $programshorttitle, $programtitle]
                     = [ $selectvalues[0], '', ''];
             }
         } else {
-                list($programid, $programshorttitle, $programtitle) = [ '', '', ''];
+                [$programid, $programshorttitle, $programtitle] = [ '', '', ''];
         }
 
         $selectvalues = $mform->getElementValue('selectcohort');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0], ':')) {
-                list($cohortid, $cohorttitle) = explode(':', $selectvalues[0], 2);
+                [$cohortid, $cohorttitle] = explode(':', $selectvalues[0], 2);
             } else {
-                list($cohortid, $cohorttitle) = [$selectvalues[0], '', ''];
+                [$cohortid, $cohorttitle] = [$selectvalues[0], '', ''];
             }
         } else {
             $cohortid = '';
@@ -330,9 +325,9 @@ class enrol_ilios_edit_form extends moodleform {
         $selectvalues = $mform->getElementValue('selectlearnergroup');
         if (is_array($selectvalues)) {
             if (strstr($selectvalues[0], ':')) {
-                list($learnergroupid, $learnergrouptitle) = explode(':', $selectvalues[0], 2);
+                [$learnergroupid, $learnergrouptitle] = explode(':', $selectvalues[0], 2);
             } else {
-                list($learnergroupid, $learnergrouptitle) = [$selectvalues[0], '', ''];
+                [$learnergroupid, $learnergrouptitle] = [$selectvalues[0], '', ''];
             }
         } else {
             $learnergroupid = '';
@@ -348,7 +343,7 @@ class enrol_ilios_edit_form extends moodleform {
             $progel->load($schooloptions);
         } else {
             foreach ($schools as $school) {
-                $progel->addOption( $school->title, "$school->id:$school->title" );
+                $progel->addOption($school->title, "$school->id:$school->title");
             }
         }
 
@@ -389,8 +384,8 @@ class enrol_ilios_edit_form extends moodleform {
 
                 foreach ($cohorts as $cohort) {
                     $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
-                                                                 .' ('.count($cohort->learnerGroups).')'
-                                                                 .' ('.count($cohort->users).')';
+                                                                 . ' (' . count($cohort->learnerGroups) . ')'
+                                                                 . ' (' . count($cohort->users) . ')';
                 }
                 $progel->load($cohortoptions);
             }
@@ -404,9 +399,9 @@ class enrol_ilios_edit_form extends moodleform {
             $learnergroups = $ilios->get_learner_groups(['cohort' => $cid, 'parent' => 'null'], ['title' => "ASC"]);
             if (!empty($learnergroups)) {
                 foreach ($learnergroups as $group) {
-                    $learnergroupoptions["$group->id:$group->title"] = $group->title.
-                                                     ' ('. count($group->children) .')'.
-                                                     ' ('. count($group->users) .')';
+                    $learnergroupoptions["$group->id:$group->title"] = $group->title .
+                                                     ' (' . count($group->children) . ')' .
+                                                     ' (' . count($group->users) . ')';
                 }
                 $progel->load($learnergroupoptions);
             }
@@ -419,16 +414,17 @@ class enrol_ilios_edit_form extends moodleform {
 
             $subgroups = $ilios->get_learner_groups(["parent" => $gid], ["title" => "ASC"]);
             foreach ($subgroups as $subgroup) {
-                $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
-                                                                   ' ('. count($subgroup->children) .')'.
-                                                                   ' ('. count($subgroup->users) .')';
+                $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title .
+                                                                   ' (' . count($subgroup->children) . ')' .
+                                                                   ' (' . count($subgroup->users) . ')';
                 if (!empty($subgroup->children)) {
                     $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $ilios) {
                         $subgrps = $ilios->get_learner_groups([ 'parent' => $parent->id], [ 'title' => "ASC"]);
                         foreach ($subgrps as $subgrp) {
-                            $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
-                                                          ' ('. count($subgrp->children) .')'.
-                                                          ' ('. count($subgrp->users) .')';
+                            $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"]
+                                = $parent->title . ' / ' . $subgrp->title .
+                                ' (' . count($subgrp->children) . ')' .
+                                ' (' . count($subgrp->users) . ')';
                             if (!empty($subgrp->children)) {
                                 $processchildren($subgrp);
                             }
@@ -464,12 +460,12 @@ class enrol_ilios_edit_form extends moodleform {
 
         // Check for existing role.
         $selectgrouptype = 'cohort';
-        list($selectgroupid, $selecttitle) = explode(':', $data['selectcohort'], 2);
+        [$selectgroupid, $selecttitle] = explode(':', $data['selectcohort'], 2);
         if (!empty($data['selectlearnergroup'])) {
             $selectgrouptype = 'learnerGroup';
-            list($selectgroupid, $selecttitle) = explode(':', $data['selectlearnergroup'], 2);
+            [$selectgroupid, $selecttitle] = explode(':', $data['selectlearnergroup'], 2);
             if (!empty($data['selectsubgroup'])) {
-                list($selectgroupid, $selecttitle) = explode(':', $data['selectsubgroup'], 2);
+                [$selectgroupid, $selecttitle] = explode(':', $data['selectsubgroup'], 2);
             }
         }
 
@@ -482,7 +478,8 @@ class enrol_ilios_edit_form extends moodleform {
             'id' => $data['id'],
         ];
         // Customint2 could be NULL or 0 on the database.
-        if (empty($data['selectusertype'])
+        if (
+            empty($data['selectusertype'])
             && $DB->record_exists_select(
                 'enrol',
                 "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1 "
@@ -492,12 +489,14 @@ class enrol_ilios_edit_form extends moodleform {
         ) {
             $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
         } else {
-            if ($DB->record_exists_select(
-                'enrol',
-                "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1  " .
-                " AND customint2 = :customint2 AND courseid = :courseid AND enrol = 'ilios' AND id <> :id",
-                $params
-            )) {
+            if (
+                $DB->record_exists_select(
+                    'enrol',
+                    "roleid = :roleid AND customchar1 = :customchar1 AND customint1 = :customint1  " .
+                    " AND customint2 = :customint2 AND courseid = :courseid AND enrol = 'ilios' AND id <> :id",
+                    $params
+                )
+            ) {
                 $errors['roleid'] = get_string('instanceexists', 'enrol_ilios');
             }
         }

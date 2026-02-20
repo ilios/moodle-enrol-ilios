@@ -48,7 +48,6 @@ use Psr\Http\Message\RequestInterface;
  * @covers     \enrol_ilios\ilios
  */
 final class ilios_test extends advanced_testcase {
-
     /**
      * Tests the happy path on get_schools().
      *
@@ -1055,7 +1054,8 @@ final class ilios_test extends advanced_testcase {
     public function test_get_with_filtering_and_sorting_criteria(
         array $filterby,
         array $sortby,
-        string $expectedquerystring): void {
+        string $expectedquerystring
+    ): void {
         $this->resetAfterTest();
         $accesstoken = helper::create_valid_ilios_api_access_token();
         set_config('apikey', $accesstoken, 'enrol_ilios');
