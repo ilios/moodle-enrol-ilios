@@ -47,7 +47,6 @@ use text_progress_trace;
  * @covers \enrol_ilios_plugin
  */
 final class lib_test extends \advanced_testcase {
-
     /**
      * Tests the enrolment of Ilios cohort members into a Moodle course.
      */
@@ -144,8 +143,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $this->assertEquals(1, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $this->assertEquals($studentrole->id, $instance->roleid);
@@ -274,7 +272,7 @@ final class lib_test extends \advanced_testcase {
         $this->assertStringContainsString(
             "Enrolling students to Course ID {$course->id} with Role ID "
                 . "{$studentrole->id} through Ilios Sync ID {$instance->id}.",
-                $output
+            $output
         );
         $this->assertStringContainsString('5 Ilios users found.', $output);
         $this->assertStringContainsString(
@@ -282,7 +280,7 @@ final class lib_test extends \advanced_testcase {
             $output
         );
         $this->assertStringContainsString(
-            "changing enrollment status to '". ENROL_USER_ACTIVE
+            "changing enrollment status to '" . ENROL_USER_ACTIVE
             . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
             $output
         );
@@ -489,8 +487,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $this->assertEquals(1, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $this->assertEquals($studentrole->id, $instance->roleid);
@@ -626,7 +623,7 @@ final class lib_test extends \advanced_testcase {
         );
         $this->assertEquals(1, substr_count($output, 'enrolling with ' . ENROL_USER_ACTIVE . ' status:'));
         $this->assertStringContainsString(
-            "changing enrollment status to '". ENROL_USER_ACTIVE
+            "changing enrollment status to '" . ENROL_USER_ACTIVE
             . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user6->id} ==> courseid {$course->id}",
             $output
         );
@@ -913,7 +910,7 @@ final class lib_test extends \advanced_testcase {
         $context = context_course::instance($course->id);
 
         $users = array_map(
-            fn ($i) => $this->getDataGenerator()->create_user(['idnumber' => 'xx100000'. $i]),
+            fn ($i) => $this->getDataGenerator()->create_user(['idnumber' => 'xx100000' . $i]),
             range(1, 9)
         );
 
@@ -939,8 +936,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 1, // Ilios Instructors enrolment.
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $this->assertEquals(1, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $this->assertEquals($studentrole->id, $instance->roleid);
@@ -1001,7 +997,8 @@ final class lib_test extends \advanced_testcase {
         $this->assertEquals(
             'filters[id][]=1&filters[id][]=2&filters[id][]=3&filters[id][]=4'
             . '&filters[id][]=5&filters[id][]=6&filters[id][]=7&filters[id][]=8&filters[id][]=9',
-            urldecode($container[11]['request']->getUri()->getQuery()));
+            urldecode($container[11]['request']->getUri()->getQuery())
+        );
 
         // Check the logging output.
         $this->assertStringContainsString(
@@ -1085,8 +1082,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => 'learnerGroup',
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $this->assertEquals(1, $DB->count_records('enrol', ['enrol' => 'ilios']));
         $this->assertNotNull($DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*'));
 
@@ -1173,8 +1169,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
         $plugin->enrol_user($instance, $user->id, $studentrole->id);
@@ -1384,8 +1379,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
         $plugin->enrol_user($instance, $user->id, $studentrole->id);
@@ -1499,7 +1493,7 @@ final class lib_test extends \advanced_testcase {
         // Check the logging output.
         $this->assertStringContainsString('1 Ilios users found.', $output);
         $this->assertStringContainsString(
-            "changing enrollment status to '". ENROL_USER_ACTIVE
+            "changing enrollment status to '" . ENROL_USER_ACTIVE
             . "' from '" . ENROL_USER_SUSPENDED . "': userid {$user->id} ==> courseid {$course->id}",
             $output
         );
@@ -1598,8 +1592,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
 
@@ -1743,8 +1736,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
 
@@ -1835,8 +1827,7 @@ final class lib_test extends \advanced_testcase {
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
                 'status' => ENROL_INSTANCE_DISABLED,
-            ]
-        );
+            ]);
         $CFG->enrol_plugins_enabled = 'ilios';
 
         // Run enrolment sync.
@@ -1850,8 +1841,9 @@ final class lib_test extends \advanced_testcase {
         // There should be nothing in here but the task start/end notifications.
         $this->assertEquals(
             "Starting user enrolment synchronisation...\n"
-            . "...user enrolment synchronisation finished."
-            , trim($output));
+            . "...user enrolment synchronisation finished.",
+            trim($output)
+        );
 
         // No need to check enrolments, nothing happened during the sync.
     }
@@ -1909,8 +1901,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
         $CFG->enrol_plugins_enabled = 'ilios';
 
@@ -2053,8 +2044,7 @@ final class lib_test extends \advanced_testcase {
                 'customint2' => 0,
                 'customchar1' => $synctype,
                 'roleid' => $studentrole->id,
-            ]
-        );
+            ]);
         $CFG->enrol_plugins_enabled = 'ilios';
         $instance = $DB->get_record('enrol', ['courseid' => $course->id, 'enrol' => 'ilios'], '*', MUST_EXIST);
 

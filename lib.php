@@ -28,7 +28,7 @@ use enrol_ilios\ilios;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir.'/filelib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Ilios enrolment plugin implementation.
@@ -72,52 +72,50 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         if (empty($instance)) {
             $enrol = $this->get_name();
-            return get_string('pluginshortname', 'enrol_'.$enrol);
-
+            return get_string('pluginshortname', 'enrol_' . $enrol);
         } else if (empty($instance->name)) {
             $enrol = $this->get_name();
-            $groupname = get_string('pluginshortname', 'enrol_'.$enrol);
+            $groupname = get_string('pluginshortname', 'enrol_' . $enrol);
             $syncinfo = json_decode($instance->customtext1);
 
             if (!empty($syncinfo)) {
                 $schooltitle = $syncinfo->school->title;
                 $programtitle = $syncinfo->program->shorttitle;
                 $cohorttitle = $syncinfo->cohort->title;
-                $groupname .= ": ". $schooltitle ."/".$programtitle."/".$cohorttitle;
+                $groupname .= ": " . $schooltitle . "/" . $programtitle . "/" . $cohorttitle;
                 if (isset($syncinfo->learnerGroup)) {
                     $grouptitle = $syncinfo->learnerGroup->title;
-                    $groupname .= '/'.$grouptitle;
+                    $groupname .= '/' . $grouptitle;
                 }
                 if (isset($syncinfo->subGroup)) {
                     $grouptitle = $syncinfo->subGroup->title;
-                    $groupname .= '/'.$grouptitle;
+                    $groupname .= '/' . $grouptitle;
                 }
             }
 
             if ($role = $DB->get_record('role', ['id' => $instance->roleid])) {
                 $role = role_get_name($role, context_course::instance($instance->courseid, IGNORE_MISSING));
                 if (empty($instance->customint2)) {
-                    $groupname .= ' (Learner => '.$role;
+                    $groupname .= ' (Learner => ' . $role;
                 } else {
-                    $groupname .= ' (Instructor => '.$role;
+                    $groupname .= ' (Instructor => ' . $role;
                 }
 
                 $groupid = $instance->customint6;
-                $group = groups_get_group( $groupid, 'name' );
+                $group = groups_get_group($groupid, 'name');
                 if (!empty($group) && isset($group->name)) {
                     $groupname .= ', ' . $group->name;
                 }
                 $groupname .= ')';
             } else {
                 $groupid = $instance->customint6;
-                $group = groups_get_group( $groupid, 'name' );
+                $group = groups_get_group($groupid, 'name');
                 if (!empty($group) && isset($group->name)) {
-                    $groupname .= ' (' . $group->name. ')';
+                    $groupname .= ' (' . $group->name . ')';
                 }
             }
 
             return $groupname;
-
         } else {
             return format_string($instance->name, true, ['context' => context_course::instance($instance->courseid)]);
         }
@@ -175,8 +173,12 @@ class enrol_ilios_plugin extends enrol_plugin {
 
         if (has_capability('enrol/ilios:config', $context)) {
             $editlink = new moodle_url("/enrol/ilios/edit.php", ['courseid' => $instance->courseid, 'id' => $instance->id]);
-            $icons[] = $OUTPUT->action_icon($editlink, new pix_icon('t/edit', get_string('edit'), 'core',
-                    ['class' => 'iconsmall']));
+            $icons[] = $OUTPUT->action_icon($editlink, new pix_icon(
+                't/edit',
+                get_string('edit'),
+                'core',
+                ['class' => 'iconsmall']
+            ));
         }
 
         return $icons;
@@ -305,8 +307,9 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $trace->output(
                         "skipping: Cannot find campusId "
                         . $user->campusId
-                        . " that matches Moodle user field 'idnumber'."
-                        , 1);
+                        . " that matches Moodle user field 'idnumber'.",
+                        1
+                    );
                 } else {
                     $enrolleduserids[] = $userid = $iliosusers[$user->id]['id'];
 
@@ -348,16 +351,16 @@ class enrol_ilios_plugin extends enrol_plugin {
                             "changing enrollment status to '"
                             . ENROL_USER_ACTIVE
                             . "' from '{$ue->status}': userid $userid ==> courseid "
-                            . $instance->courseid
-                            , 1
+                            . $instance->courseid,
+                            1
                         );
                     } else {
                         $trace->output(
                             "enrolling with "
                             . ENROL_USER_ACTIVE
                             . " status: userid $userid ==> courseid "
-                            . $instance->courseid
-                            , 1
+                            . $instance->courseid,
+                            1
                         );
                     }
                 }
@@ -367,8 +370,8 @@ class enrol_ilios_plugin extends enrol_plugin {
             foreach ($suspendenrolments as $ue) {
                 $trace->output(
                     "Suspending enrollment for disabled Ilios user: userid "
-                    . " {$ue->userid} ==> courseid {$instance->courseid}."
-                    , 1
+                    . " {$ue->userid} ==> courseid {$instance->courseid}.",
+                    1
                 );
                 $this->update_user_enrol($instance, $ue->userid, ENROL_USER_SUSPENDED);
             }
@@ -376,7 +379,7 @@ class enrol_ilios_plugin extends enrol_plugin {
             // Unenrol as necessary.
             $trace->output(
                 "Unenrolling users from Course ID "
-                . $instance->courseid." with Role ID "
+                . $instance->courseid . " with Role ID "
                 . $instance->roleid
                 . " that no longer associate with Ilios Sync ID "
                 . $instance->id
@@ -388,7 +391,7 @@ class enrol_ilios_plugin extends enrol_plugin {
                   WHERE ue.enrolid = $instance->id";
 
             if (!empty($enrolleduserids)) {
-                $sql .= " AND ue.userid NOT IN ( ".implode(",", $enrolleduserids)." )";
+                $sql .= " AND ue.userid NOT IN ( " . implode(",", $enrolleduserids) . " )";
             }
 
             $rs = $DB->get_recordset_sql($sql);
@@ -399,8 +402,8 @@ class enrol_ilios_plugin extends enrol_plugin {
                     $trace->output(
                         "unenrolling: $ue->userid ==> "
                         . $instance->courseid
-                        . " via Ilios $synctype $syncid"
-                        , 1
+                        . " via Ilios $synctype $syncid",
+                        1
                     );
                 } else { // Would be ENROL_EXT_REMOVED_SUSPENDNOROLES.
                     // Just disable and ignore any changes.
@@ -417,8 +420,8 @@ class enrol_ilios_plugin extends enrol_plugin {
                             "suspending and unassigning all roles: userid "
                             . $ue->userid
                             . " ==> courseid "
-                            . $instance->courseid
-                            , 1
+                            . $instance->courseid,
+                            1
                         );
                     }
                 }
@@ -454,7 +457,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         $rs = $DB->get_recordset_sql($sql, $params);
         foreach ($rs as $ra) {
             role_assign($ra->roleid, $ra->userid, $ra->contextid, 'enrol_ilios', $ra->itemid);
-            $trace->output("assigning role: $ra->userid ==> $ra->courseid as ".$allroles[$ra->roleid]->shortname, 1);
+            $trace->output("assigning role: $ra->userid ==> $ra->courseid as " . $allroles[$ra->roleid]->shortname, 1);
         }
         $rs->close();
 
@@ -475,7 +478,7 @@ class enrol_ilios_plugin extends enrol_plugin {
         $rs = $DB->get_recordset_sql($sql, $params);
         foreach ($rs as $ra) {
             role_unassign($ra->roleid, $ra->userid, $ra->contextid, 'enrol_ilios', $ra->itemid);
-            $trace->output("unassigning role: $ra->userid ==> $ra->courseid as ".$allroles[$ra->roleid]->shortname, 1);
+            $trace->output("unassigning role: $ra->userid ==> $ra->courseid as " . $allroles[$ra->roleid]->shortname, 1);
         }
         $rs->close();
 
@@ -624,7 +627,6 @@ class enrol_ilios_plugin extends enrol_plugin {
             $trace = new null_progress_trace();
             $this->sync($trace, $course->id);
             $trace->finished();
-
         } else if ($this->get_config('unenrolaction') == ENROL_EXT_REMOVED_SUSPENDNOROLES) {
             $instance = $DB->get_record(
                 'enrol',
@@ -647,7 +649,6 @@ class enrol_ilios_plugin extends enrol_plugin {
             $trace = new null_progress_trace();
             $this->sync($trace, $course->id);
             $trace->finished();
-
         } else {
             $step->set_mapping('enrol', $oldid, 0);
         }

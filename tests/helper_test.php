@@ -39,7 +39,6 @@ use enrol_ilios\tests\helper;
  * @covers     \enrol_ilios\tests\helper
  */
 final class helper_test extends basic_testcase {
-
     /**
      * Checks that the generator function creates a valid access token.
      * @return void

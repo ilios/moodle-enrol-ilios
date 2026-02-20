@@ -32,8 +32,8 @@ use enrol_ilios\ilios;
 define('AJAX_SCRIPT', true);
 
 require('../../config.php');
-require_once($CFG->dirroot.'/enrol/locallib.php');
-require_once($CFG->dirroot.'/group/lib.php');
+require_once($CFG->dirroot . '/enrol/locallib.php');
+require_once($CFG->dirroot . '/group/lib.php');
 
 // Must have the sesskey.
 $id      = required_param('id', PARAM_INT); // Course ID.
@@ -112,8 +112,8 @@ switch ($action) {
             $cohorts = $ilios->get_cohorts(["programYear" => $programyeararray], ["title" => "ASC"]);
             foreach ($cohorts as $cohort) {
                 $cohortoptions["$cohort->id:$cohort->title"] = $cohort->title
-                                                             .' ('.count($cohort->learnerGroups).')'
-                                                             .' ('.count($cohort->users).')';
+                                                             . ' (' . count($cohort->learnerGroups) . ')'
+                                                             . ' (' . count($cohort->users) . ')';
             }
         }
         $outcome->response = $cohortoptions;
@@ -126,9 +126,9 @@ switch ($action) {
         $learnergroups = $ilios->get_learner_groups(['cohort' => $cid, 'parent' => 'null'], ['title' => "ASC"]);
         $grouparray = [];
         foreach ($learnergroups as $group) {
-            $grouparray["$group->id:$group->title"] = $group->title.
-                                                    ' ('. count($group->children) .')';
-            $grouparray["$group->id:$group->title"] .= ' ('. count($group->users) .')';
+            $grouparray["$group->id:$group->title"] = $group->title .
+                                                    ' (' . count($group->children) . ')';
+            $grouparray["$group->id:$group->title"] .= ' (' . count($group->users) . ')';
         }
         $outcome->response = $grouparray;
         break;
@@ -140,17 +140,17 @@ switch ($action) {
         $subgroupoptions = [];
         $subgroups = $ilios->get_learner_groups(["parent" => $gid], ["title" => "ASC"]);
         foreach ($subgroups as $subgroup) {
-            $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title.
-                                                               ' ('. count($subgroup->children) .')';
-            $subgroupoptions["$subgroup->id:$subgroup->title"] .= ' ('. count($subgroup->users) .')';
+            $subgroupoptions["$subgroup->id:$subgroup->title"] = $subgroup->title .
+                                                               ' (' . count($subgroup->children) . ')';
+            $subgroupoptions["$subgroup->id:$subgroup->title"] .= ' (' . count($subgroup->users) . ')';
 
             if (!empty($subgroup->children)) {
                 $processchildren = function ($parent) use (&$processchildren, &$subgroupoptions, $ilios) {
                     $subgrps = $ilios->get_learner_groups([ 'parent' => $parent->id], [ 'title' => "ASC"]);
                     foreach ($subgrps as $subgrp) {
-                        $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title.' / '.$subgrp->title.
-                                                                                        ' ('. count($subgrp->children) .')';
-                        $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] .= ' ('. count($subgrp->users) .')';
+                        $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] = $parent->title . ' / ' . $subgrp->title .
+                                                                                        ' (' . count($subgrp->children) . ')';
+                        $subgroupoptions["$subgrp->id:$parent->title / $subgrp->title"] .= ' (' . count($subgrp->users) . ')';
 
                         if (!empty($grp->children)) {
                             $processchildren($subgrp);
