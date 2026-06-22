@@ -1,5 +1,8 @@
 name: Moodle Plugin CI
 
+permissions:
+  contents: read
+
 on:
   push:
   pull_request:
